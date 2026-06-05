@@ -71,8 +71,27 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 }
 
 .x-axis {
-  text-align: center; padding-top: 7px;
+  text-align: center; padding-top: 5px;
   font-size: 9px; color: var(--muted); user-select: none;
+}
+
+/* ── Grid overlay toggles ── */
+.grid-controls {
+  display: flex; gap: 6px; justify-content: flex-end;
+  padding: 5px 0 2px;
+}
+.grid-toggle {
+  background: none; border: 1px solid #252525;
+  color: #383838; cursor: pointer; font-family: inherit;
+  font-size: 9px; letter-spacing: 0.06em; font-weight: 700;
+  padding: 3px 8px; border-radius: 10px;
+  transition: all 0.15s;
+}
+.grid-toggle:hover { border-color: #3a3a3a; color: var(--muted); }
+.grid-toggle--on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(123, 31, 162, 0.08);
 }
 
 /* ── Table panel ── */

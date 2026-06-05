@@ -16,6 +16,8 @@ export default function App() {
   const [view,        setView]        = useState('log')   // 'log' | 'analysis'
   const [pendingVibe,     setPendingVibe]     = useState(null)
   const [settingPassword, setSettingPassword] = useState(false)
+  const [showLabels,      setShowLabels]      = useState(true)
+  const [showEmotions,    setShowEmotions]    = useState(false)
 
   const { vibes, loading, addVibe, deleteVibe } = useVibes(session)
 
@@ -98,6 +100,10 @@ export default function App() {
                 vibes={vibes}
                 onGridClick={handleGridClick}
                 pendingVibe={pendingVibe}
+                showLabels={showLabels}
+                showEmotions={showEmotions}
+                onToggleLabels={() => setShowLabels(v => !v)}
+                onToggleEmotions={() => setShowEmotions(v => !v)}
               />
             </div>
 
