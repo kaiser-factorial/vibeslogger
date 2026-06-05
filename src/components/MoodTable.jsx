@@ -16,12 +16,34 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString()
 }
 
-export default function MoodTable({ vibes, onDelete }) {
+export default function MoodTable({ vibes, onDelete, onUpdate }) {
   const [confirmId, setConfirmId] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editNote,  setEditNote]  = useState('')
+  const [saving,    setSaving]    = useState(false)
 
   function handleDelete(id) {
     if (confirmId === id) { onDelete(id); setConfirmId(null) }
-    else setConfirmId(id)
+    else { setConfirmId(id); setEditingId(null) }
+  }
+
+  function startEdit(v) {
+    setEditingId(v.id)
+    setEditNote(v.note || '')
+    setConfirmId(null)
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditNote('')
+  }
+
+  async function saveEdit(id) {
+    setSaving(true)
+    await onUpdate(id, editNote.trim() || null)
+    setSaving(false)
+    setEditingId(null)
+    setEditNote('')
   }
 
   if (vibes.length === 0) return (
@@ -44,36 +66,74 @@ export default function MoodTable({ vibes, onDelete }) {
           </tr>
         </thead>
         <tbody>
-          {vibes.map(v => (
-            <tr key={v.id}>
-              <td className="td-muted">{fmtDate(v.created_at)}</td>
-              <td className="td-muted">{fmtTime(v.created_at)}</td>
-              <td className="td-mono">
-                {/* Dot color encodes valence × arousal */}
-                <span
-                  className="vibe-dot"
-                  style={{ background: vibeColor(v.valence, v.arousal) }}
-                />
-                ({v.valence}, {v.arousal})
-              </td>
-              <td className="td-note">
-                {v.note || <span className="td-empty">—</span>}
-              </td>
-              <td>
-                {isLocked(v.created_at) ? (
-                  <span className="entry-locked" title="locked after 3 hours">·</span>
-                ) : (
-                  <button
-                    className={`btn-delete ${confirmId === v.id ? 'btn-delete-confirm' : ''}`}
-                    onClick={() => handleDelete(v.id)}
-                    title={confirmId === v.id ? 'click again to confirm' : 'delete'}
-                  >
-                    {confirmId === v.id ? '?' : '×'}
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
+          {vibes.map(v => {
+            const locked  = isLocked(v.created_at)
+            const editing = editingId === v.id
+
+            return (
+              <tr key={v.id}>
+                <td className="td-muted">{fmtDate(v.created_at)}</td>
+                <td className="td-muted">{fmtTime(v.created_at)}</td>
+                <td className="td-mono">
+                  <span
+                    className="vibe-dot"
+                    style={{ background: vibeColor(v.valence, v.arousal) }}
+                  />
+                  ({v.valence}, {v.arousal})
+                </td>
+
+                {/* Note cell — view or edit */}
+                <td className="td-note">
+                  {editing ? (
+                    <input
+                      className="note-edit-input"
+                      value={editNote}
+                      onChange={e => setEditNote(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter')  saveEdit(v.id)
+                        if (e.key === 'Escape') cancelEdit()
+                      }}
+                      autoFocus
+                      disabled={saving}
+                    />
+                  ) : (
+                    v.note || <span className="td-empty">—</span>
+                  )}
+                </td>
+
+                {/* Action cell */}
+                <td className="td-actions">
+                  {locked ? (
+                    <span className="entry-locked" title="locked after 3 hours">·</span>
+                  ) : editing ? (
+                    <div className="row-actions">
+                      <button
+                        className="btn-save"
+                        onClick={() => saveEdit(v.id)}
+                        disabled={saving}
+                      >
+                        {saving ? '...' : 'save'}
+                      </button>
+                      <button className="btn-cancel-edit" onClick={cancelEdit}>×</button>
+                    </div>
+                  ) : (
+                    <div className="row-actions">
+                      <button className="btn-edit" onClick={() => startEdit(v)}>
+                        edit
+                      </button>
+                      <button
+                        className={`btn-delete ${confirmId === v.id ? 'btn-delete-confirm' : ''}`}
+                        onClick={() => handleDelete(v.id)}
+                        title={confirmId === v.id ? 'click again to confirm' : 'delete'}
+                      >
+                        {confirmId === v.id ? '?' : '×'}
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

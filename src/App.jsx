@@ -19,7 +19,7 @@ export default function App() {
   const [showLabels,      setShowLabels]      = useState(true)
   const [showEmotions,    setShowEmotions]    = useState(false)
 
-  const { vibes, loading, addVibe, deleteVibe } = useVibes(session)
+  const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -111,7 +111,7 @@ export default function App() {
               <div className="panel-table">
                 {loading
                   ? <div className="loading">loading vibes...</div>
-                  : <MoodTable vibes={vibes} onDelete={deleteVibe} />
+                  : <MoodTable vibes={vibes} onDelete={deleteVibe} onUpdate={updateVibe} />
                 }
               </div>
             )}

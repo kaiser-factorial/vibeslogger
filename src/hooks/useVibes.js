@@ -34,11 +34,22 @@ export default function useVibes(session) {
     return { error }
   }
 
+  async function updateVibe(id, note) {
+    const { data, error } = await supabase
+      .from('vibes')
+      .update({ note: note || null })
+      .eq('id', id)
+      .select()
+      .single()
+    if (!error && data) setVibes(prev => prev.map(v => v.id === id ? data : v))
+    return { error }
+  }
+
   async function deleteVibe(id) {
     const { error } = await supabase.from('vibes').delete().eq('id', id)
     if (!error) setVibes(prev => prev.filter(v => v.id !== id))
     return { error }
   }
 
-  return { vibes, loading, addVibe, deleteVibe }
+  return { vibes, loading, addVibe, updateVibe, deleteVibe }
 }
