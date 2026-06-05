@@ -5,7 +5,7 @@ export const ZONE_META = {
   over:     { label: "it's so over",           color: '#407A96' },
   vibing:   { label: 'we vibing',              color: '#4896A8' },
   whatitis: { label: 'it is what it is',       color: '#916018' },
-  mwbs:     { label: 'mom would be sad',       color: '#484898' },
+  mwbs:     { label: 'log off forever',         color: '#484898' },
 }
 
 export const ZONE_ORDER = ['lfg', 'back', 'ball', 'vibing', 'over', 'whatitis', 'mwbs']

@@ -23,7 +23,7 @@ const LABELS = [
   { text: 'what\nit is',              x: '29%',   y: '50%',   sz: 20, fw: 700, rot: -9, ital: true },
   { text: "It's so\nover",            x: '4%',    y: '70%',   sz: 24, fw: 900 },
   { text: 'We\nvibing',               x: '55%',   y: '70%',   sz: 28, fw: 900 },
-  { text: 'Mom would\nbe sad',        x: '0.5%',  y: '88.5%', sz: 8,  fw: 500 },
+  { text: 'log off\nforever',          x: '0.5%',  y: '88.5%', sz: 8,  fw: 500 },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
