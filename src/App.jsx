@@ -5,6 +5,7 @@ import MoodGrid from './components/MoodGrid'
 import MoodTable from './components/MoodTable'
 import MoodModal from './components/MoodModal'
 import Analysis from './components/Analysis'
+import SetPasswordModal from './components/SetPasswordModal'
 import useVibes from './hooks/useVibes'
 
 export default function App() {
@@ -13,7 +14,8 @@ export default function App() {
   // localStorage hint: skip landing flash on return visits
   const [expanded,    setExpanded]    = useState(() => localStorage.getItem('vl-has-vibes') === 'true')
   const [view,        setView]        = useState('log')   // 'log' | 'analysis'
-  const [pendingVibe, setPendingVibe] = useState(null)    // {x,y} awaiting note
+  const [pendingVibe,     setPendingVibe]     = useState(null)
+  const [settingPassword, setSettingPassword] = useState(false)
 
   const { vibes, loading, addVibe, deleteVibe } = useVibes(session)
 
@@ -63,9 +65,14 @@ export default function App() {
               <p className="app-subtitle">click to log a vibe</p>
             )}
           </div>
-          <button className="btn-signout" onClick={() => supabase.auth.signOut()}>
-            sign out
-          </button>
+          <div className="header-actions">
+            <button className="btn-setpw" onClick={() => setSettingPassword(true)}>
+              set password
+            </button>
+            <button className="btn-signout" onClick={() => supabase.auth.signOut()}>
+              sign out
+            </button>
+          </div>
         </div>
         <nav className="app-nav">
           <button
@@ -109,6 +116,10 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {settingPassword && (
+        <SetPasswordModal onClose={() => setSettingPassword(false)} />
+      )}
 
       {pendingVibe && (
         <MoodModal

@@ -1,30 +1,38 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-/**
- * Auth — magic link (passwordless) sign-in.
- * Supabase sends a one-time link to the email; no password needed.
- */
 export default function Auth() {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState(null)
+  const [mode,     setMode]     = useState('magic')   // 'magic' | 'password'
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [email,    setEmail]    = useState('')
+  const [password, setPassword] = useState('')
+  const [loading,  setLoading]  = useState(false)
+  const [sent,     setSent]     = useState(false)
+  const [error,    setError]    = useState(null)
 
-  async function handleSubmit(e) {
+  function switchMode(m) { setMode(m); setError(null); setSent(false) }
+
+  async function handleMagicLink(e) {
     e.preventDefault()
-    setLoading(true)
-    setError(null)
+    setLoading(true); setError(null)
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        // After clicking the magic link, user lands back here
-        emailRedirectTo: window.location.href,
-      },
+      options: { emailRedirectTo: window.location.origin },
     })
     setLoading(false)
     if (error) setError(error.message)
     else setSent(true)
+  }
+
+  async function handlePassword(e) {
+    e.preventDefault()
+    setLoading(true); setError(null)
+    const { error } = isSignUp
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (error) setError(error.message)
+    // success: onAuthStateChange in App.jsx handles session
   }
 
   if (sent) return (
@@ -39,19 +47,54 @@ export default function Auth() {
     <div className="auth-wrap">
       <h1>vibeslogger</h1>
       <p className="auth-sub">log your position on the vibe spectrum</p>
-      <form onSubmit={handleSubmit} className="auth-form">
-        <input
-          type="email"
-          placeholder="your email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-          autoFocus
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? 'sending...' : 'send magic link'}
+
+      <div className="auth-modes">
+        <button
+          className={`auth-mode-tab ${mode === 'magic' ? 'auth-mode-tab--active' : ''}`}
+          onClick={() => switchMode('magic')}
+        >
+          magic link
         </button>
-      </form>
+        <button
+          className={`auth-mode-tab ${mode === 'password' ? 'auth-mode-tab--active' : ''}`}
+          onClick={() => switchMode('password')}
+        >
+          password
+        </button>
+      </div>
+
+      {mode === 'magic' ? (
+        <form onSubmit={handleMagicLink} className="auth-form">
+          <input
+            type="email" placeholder="your email" value={email}
+            onChange={e => setEmail(e.target.value)} required autoFocus
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? 'sending...' : 'send magic link'}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handlePassword} className="auth-form">
+          <input
+            type="email" placeholder="your email" value={email}
+            onChange={e => setEmail(e.target.value)} required autoFocus
+          />
+          <input
+            type="password" placeholder="password" value={password}
+            onChange={e => setPassword(e.target.value)} required minLength={6}
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? '...' : isSignUp ? 'create account' : 'sign in'}
+          </button>
+          <button
+            type="button" className="btn-ghost auth-toggle"
+            onClick={() => { setIsSignUp(v => !v); setError(null) }}
+          >
+            {isSignUp ? 'already have an account? sign in' : "new here? create account"}
+          </button>
+        </form>
+      )}
+
       {error && <p className="auth-error">{error}</p>}
     </div>
   )

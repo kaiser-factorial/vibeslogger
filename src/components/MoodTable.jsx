@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { vibeColor } from '../lib/vibeColor'
 
+const LOCK_AFTER_MS = 3 * 60 * 60 * 1000
+
+function isLocked(createdAt) {
+  return Date.now() - new Date(createdAt).getTime() > LOCK_AFTER_MS
+}
+
 function fmtDate(ts) {
   const d = new Date(ts)
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
@@ -54,13 +60,17 @@ export default function MoodTable({ vibes, onDelete }) {
                 {v.note || <span className="td-empty">—</span>}
               </td>
               <td>
-                <button
-                  className={`btn-delete ${confirmId === v.id ? 'btn-delete-confirm' : ''}`}
-                  onClick={() => handleDelete(v.id)}
-                  title={confirmId === v.id ? 'click again to confirm' : 'delete'}
-                >
-                  {confirmId === v.id ? '?' : '×'}
-                </button>
+                {isLocked(v.created_at) ? (
+                  <span className="entry-locked" title="locked after 3 hours">·</span>
+                ) : (
+                  <button
+                    className={`btn-delete ${confirmId === v.id ? 'btn-delete-confirm' : ''}`}
+                    onClick={() => handleDelete(v.id)}
+                    title={confirmId === v.id ? 'click again to confirm' : 'delete'}
+                  >
+                    {confirmId === v.id ? '?' : '×'}
+                  </button>
+                )}
               </td>
             </tr>
           ))}

@@ -115,6 +115,14 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   box-shadow: 0 16px 48px rgba(0,0,0,0.8);
 }
 .modal-coords { font-size: 11px; color: var(--muted); margin-bottom: 10px; letter-spacing: 0.05em; }
+.modal-input {
+  width: 100%; background: #0a0a18;
+  border: 1px solid #252540; color: var(--text);
+  border-radius: 4px; padding: 10px; font-size: 13px;
+  font-family: inherit; outline: none;
+  transition: border-color 0.15s;
+}
+.modal-input:focus { border-color: var(--accent); }
 .modal-textarea {
   width: 100%; background: #0a0a18;
   border: 1px solid #252540; color: var(--text);
@@ -141,6 +149,25 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 }
 .auth-form input:focus { border-color: var(--accent); }
 .auth-error { color: #ef5350; font-size: 12px; }
+
+/* ── Auth mode tabs ── */
+.auth-modes {
+  display: flex; gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 18px;
+  width: 100%; max-width: 320px;
+}
+.auth-mode-tab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); cursor: pointer; font-family: inherit;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 6px 14px 6px 0;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.auth-mode-tab:hover { color: var(--text); }
+.auth-mode-tab--active { color: var(--text); border-bottom-color: var(--accent); }
+.auth-toggle { font-size: 11px; text-align: left; padding: 4px 0; }
 
 /* ── Buttons ── */
 .btn-primary {
@@ -169,12 +196,21 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 }
 .btn-ghost:hover { background: #2a2a2a; }
 
+.header-actions { display: flex; align-items: center; gap: 14px; }
+
 .btn-signout {
   background: none; border: none; color: var(--muted);
   cursor: pointer; font-size: 11px; font-family: inherit;
   padding: 0;
 }
 .btn-signout:hover { color: var(--text); }
+
+.btn-setpw {
+  background: none; border: none; color: #333;
+  cursor: pointer; font-size: 11px; font-family: inherit;
+  padding: 0;
+}
+.btn-setpw:hover { color: var(--muted); }
 
 .btn-delete {
   background: none; border: none; color: #2a2a2a;
@@ -183,6 +219,7 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 }
 .btn-delete:hover { color: var(--muted); }
 .btn-delete-confirm { color: var(--danger) !important; }
+.entry-locked { color: #252525; font-size: 14px; padding: 0 2px; cursor: default; }
 
 /* ── Misc ── */
 .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
