@@ -84,9 +84,10 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   color: #383838; cursor: pointer; font-family: inherit;
   font-size: 9px; letter-spacing: 0.06em; font-weight: 700;
   padding: 3px 8px; border-radius: 10px;
-  transition: all 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
 }
 .grid-toggle:hover { border-color: #3a3a3a; color: var(--muted); }
+.grid-toggle:active { transform: scale(0.93); }
 .grid-toggle--on {
   border-color: var(--accent);
   color: var(--accent);
@@ -181,63 +182,77 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   padding: 6px 14px 6px 0;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, transform 0.1s;
 }
 .auth-mode-tab:hover { color: var(--text); }
+.auth-mode-tab:active { transform: scale(0.95); }
 .auth-mode-tab--active { color: var(--text); border-bottom-color: var(--accent); }
 .auth-toggle { font-size: 11px; text-align: left; padding: 4px 0; }
 
 /* ── Buttons ── */
+
+/* shared press feel — every clickable button gets this */
+button { -webkit-tap-highlight-color: transparent; }
+
 .btn-primary {
   flex: 1; background: var(--accent); color: #fff;
   border: none; border-radius: 4px; padding: 8px 0;
   cursor: pointer; font-size: 13px; font-weight: 700;
-  font-family: inherit; transition: background 0.15s;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #9c27b0; }
+.btn-primary:hover:not(:disabled) { background: #9c27b0; box-shadow: 0 0 12px rgba(123,31,162,0.4); }
+.btn-primary:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.auth-form button { /* reuse primary styles */
+.auth-form button {
   background: var(--accent); color: #fff;
   border: none; border-radius: 4px; padding: 10px;
   cursor: pointer; font-size: 14px; font-weight: 700;
-  font-family: inherit; transition: background 0.15s;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.auth-form button:hover:not(:disabled) { background: #9c27b0; }
+.auth-form button:hover:not(:disabled) { background: #9c27b0; box-shadow: 0 0 12px rgba(123,31,162,0.4); }
+.auth-form button:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
 .auth-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-ghost {
   background: #1e1e1e; color: var(--muted);
   border: none; border-radius: 4px; padding: 8px 14px;
   cursor: pointer; font-size: 13px; font-family: inherit;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s, transform 0.1s;
 }
-.btn-ghost:hover { background: #2a2a2a; }
+.btn-ghost:hover { background: #2a2a2a; color: var(--text); }
+.btn-ghost:active { transform: scale(0.97); }
 
 .header-actions { display: flex; align-items: center; gap: 14px; }
 
 .btn-signout {
   background: none; border: none; color: var(--muted);
-  cursor: pointer; font-size: 11px; font-family: inherit;
-  padding: 0;
+  cursor: pointer; font-size: 11px; font-family: inherit; padding: 0;
+  transition: color 0.15s, transform 0.1s;
 }
 .btn-signout:hover { color: var(--text); }
+.btn-signout:active { transform: scale(0.94); }
 
 .btn-setpw {
-  background: none; border: none; color: #333;
-  cursor: pointer; font-size: 11px; font-family: inherit;
-  padding: 0;
+  background: none; border: none; color: #3a3a3a;
+  cursor: pointer; font-size: 11px; font-family: inherit; padding: 0;
+  transition: color 0.15s, transform 0.1s;
 }
 .btn-setpw:hover { color: var(--muted); }
+.btn-setpw:active { transform: scale(0.94); }
 
 .btn-delete {
-  background: none; border: none; color: #2a2a2a;
-  cursor: pointer; font-size: 15px; padding: 0 2px;
-  font-family: inherit; transition: color 0.1s; line-height: 1;
+  background: none; border: none; color: #505050;
+  cursor: pointer; font-size: 15px; padding: 0 4px;
+  font-family: inherit; line-height: 1;
+  transition: color 0.12s, transform 0.1s;
 }
-.btn-delete:hover { color: var(--muted); }
+.btn-delete:hover { color: #999; transform: scale(1.15); }
+.btn-delete:active { transform: scale(0.9); }
 .btn-delete-confirm { color: var(--danger) !important; }
-.entry-locked { color: #252525; font-size: 14px; padding: 0 2px; cursor: default; }
+.entry-locked { color: #2e2e2e; font-size: 12px; padding: 0 4px; cursor: default; }
 
 /* ── Misc ── */
 .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
@@ -270,9 +285,10 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
   padding: 6px 14px 6px 0;
   margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s, transform 0.1s;
 }
 .nav-tab:hover { color: var(--text); }
+.nav-tab:active { transform: scale(0.95); }
 .nav-tab--active { color: var(--text); border-bottom-color: var(--accent); }
 
 /* ── Analysis layout ── */
