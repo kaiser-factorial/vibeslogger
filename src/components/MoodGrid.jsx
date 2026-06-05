@@ -122,7 +122,9 @@ export default function MoodGrid({
               lineHeight: 1.1, whiteSpace: 'pre-line',
               zIndex: 6, pointerEvents: 'none',
               fontFamily: "'Impact', 'Franklin Gothic Heavy', sans-serif",
-            }} />
+            }}>
+              {l.text}
+            </div>
           ))}
 
           {/* Emotion wheel overlay (toggleable) */}
