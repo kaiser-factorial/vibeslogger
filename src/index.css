@@ -68,6 +68,7 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none; overflow: hidden;
+  border: 1px solid #2a2a2a;
 }
 
 .x-axis {

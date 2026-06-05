@@ -3,23 +3,23 @@ import { vibeColor } from '../lib/vibeColor'
 
 // Background zone definitions (percentages of grid dimensions)
 const ZONES = [
-  { l: 0,  t: 0,  w: 47, h: 48, bg: '#6E1818' },
-  { l: 44, t: 0,  w: 56, h: 53, bg: '#384D12' },
-  { l: 82, t: 1,  w: 17, h: 17, bg: '#B8AA00', z: 3 },
-  { l: 0,  t: 41, w: 55, h: 22, bg: '#916018', z: 2 },
-  { l: 0,  t: 52, w: 46, h: 48, bg: '#407A96' },
-  { l: 46, t: 53, w: 54, h: 47, bg: '#4896A8' },
-  { l: 0,  t: 84, w: 14, h: 15, bg: '#383898', z: 3 },
+  { l: 0,  t: 0,  w: 47, h: 48, bg: '#8B2020' },
+  { l: 44, t: 0,  w: 56, h: 53, bg: '#4A5C18' },
+  { l: 82, t: 1,  w: 17, h: 17, bg: '#DADA60', z: 3 },
+  { l: 0,  t: 41, w: 55, h: 22, bg: '#BE7818', z: 2 },
+  { l: 0,  t: 52, w: 46, h: 48, bg: '#98BED0' },
+  { l: 46, t: 53, w: 54, h: 47, bg: '#88AF85' },
+  { l: 0,  t: 84, w: 14, h: 15, bg: '#6060B0', z: 3 },
 ]
 
 const LABELS = [
-  { text: 'Fuck it\nwe ball',         x: '4%',   y: '5%',  sz: 28, fw: 900 },
-  { text: 'We are so\nfucking back',  x: '47%',  y: '4%',  sz: 24, fw: 900, rot: -11, ital: true },
+  { text: 'Fuck it\nwe ball',         x: '4%',   y: '5%',  sz: 34, fw: 900 },
+  { text: 'We are so\nfucking back',  x: '48%',  y: '28%', sz: 28, fw: 900, rot: -33, ital: true },
   { text: 'LETS FUCKING\nGOOOOOOOO', x: '83%',  y: '2%',  sz: 10, fw: 700, c: '#111' },
-  { text: 'It is',                    x: '6%',   y: '42%', sz: 24, fw: 700 },
-  { text: 'what\nit is',              x: '33%',  y: '41%', sz: 24, fw: 700, rot: -9,  ital: true },
-  { text: "It's so\nover",            x: '3%',   y: '62%', sz: 28, fw: 900 },
-  { text: 'We\nvibing',               x: '60%',  y: '60%', sz: 32, fw: 900 },
+  { text: 'It is',                    x: '6%',   y: '42%', sz: 26, fw: 700 },
+  { text: 'what\nit is',              x: '33%',  y: '41%', sz: 26, fw: 700, rot: -9,  ital: true },
+  { text: "It's so\nover",            x: '3%',   y: '62%', sz: 34, fw: 900 },
+  { text: 'We\nvibing',               x: '60%',  y: '60%', sz: 38, fw: 900 },
   { text: 'Mom would\nbe sad',        x: '0.5%', y: '85%', sz: 9,  fw: 500 },
 ]
 
