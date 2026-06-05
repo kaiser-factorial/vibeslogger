@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>vibeslogger — sample</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a0a; color: #e0e0e0;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 18px 10px; border-bottom: 1px solid #1e1e1e; flex-shrink: 0;
+  }
+  h1 { font-size: 20px; font-weight: 900; letter-spacing: -0.03em; }
+  .signout { background: none; border: none; color: #555; font-size: 11px; font-family: inherit; cursor: pointer; }
+  main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Grid panel */
+  .panel-grid { flex: 0 0 62%; border-right: 1px solid #1e1e1e; display: flex; flex-direction: column; padding: 14px 10px 10px; gap: 6px; }
+  .grid-outer { display: flex; flex: 1; gap: 6px; overflow: hidden; }
+  .y-axis { display: flex; flex-direction: column; justify-content: space-between; font-size: 9px; color: #444; padding-bottom: 20px; writing-mode: vertical-rl; user-select: none; }
+  .y-axis span { transform: rotate(180deg); }
+  .grid-col { flex: 1; display: flex; flex-direction: column; }
+  .grid-area { flex: 1; position: relative; overflow: hidden; cursor: crosshair; }
+  .zone { position: absolute; pointer-events: none; }
+  .label { position: absolute; pointer-events: none; line-height: 1.1; white-space: pre-line; z-index: 5; color: #fff; font-family: 'Impact', 'Franklin Gothic Heavy', sans-serif; }
+  .x-axis { text-align: center; padding-top: 7px; font-size: 9px; color: #444; user-select: none; }
+
+  /* Table panel */
+  .panel-table { flex: 1; overflow: auto; padding: 16px 14px; }
+  .table-header { font-size: 12px; font-weight: 700; color: #aaa; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .table-count { color: #555; font-weight: 400; margin-left: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th { text-align: left; padding: 3px 5px 7px; color: #555; font-weight: 700; font-size: 9px; letter-spacing: 0.08em; border-bottom: 1px solid #1e1e1e; }
+  tr { border-bottom: 1px solid #0e0e0e; }
+  .td-muted { padding: 5px 5px; color: #555; }
+  .td-mono  { padding: 5px 5px; color: #bbb; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .td-note  { padding: 5px 5px; color: #e0e0e0; max-width: 160px; word-break: break-word; line-height: 1.4; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>vibeslogger</h1>
+  <button class="signout">sign out</button>
+</header>
+<main>
+  <div class="panel-grid">
+    <div class="grid-outer">
+      <div class="y-axis"><span>High Energy ↑</span><span>Low Energy ↓</span></div>
+      <div class="grid-col">
+        <div class="grid-area" id="grid">
+          <!-- Zone backgrounds -->
+          <div class="zone" style="left:0;top:0;width:47%;height:48%;background:#6E1818"></div>
+          <div class="zone" style="left:44%;top:0;width:56%;height:53%;background:#384D12"></div>
+          <div class="zone" style="left:82%;top:1%;width:17%;height:17%;background:#B8AA00;z-index:3"></div>
+          <div class="zone" style="left:0;top:41%;width:55%;height:22%;background:#916018;z-index:2"></div>
+          <div class="zone" style="left:0;top:52%;width:46%;height:48%;background:#407A96"></div>
+          <div class="zone" style="left:46%;top:53%;width:54%;height:47%;background:#4896A8"></div>
+          <div class="zone" style="left:0;top:84%;width:14%;height:15%;background:#383898;z-index:3"></div>
+          <!-- Labels -->
+          <div class="label" style="left:4%;top:5%;font-size:28px;font-weight:900">Fuck it&#10;we ball</div>
+          <div class="label" style="left:47%;top:4%;font-size:24px;font-weight:900;transform:rotate(-11deg);font-style:italic">We are so&#10;fucking back</div>
+          <div class="label" style="left:83%;top:2%;font-size:10px;font-weight:700;color:#111">LETS FUCKING&#10;GOOOOOOO</div>
+          <div class="label" style="left:6%;top:42%;font-size:24px;font-weight:700">It is</div>
+          <div class="label" style="left:33%;top:41%;font-size:24px;font-weight:700;transform:rotate(-9deg);font-style:italic">what&#10;it is</div>
+          <div class="label" style="left:3%;top:62%;font-size:28px;font-weight:900">It&#39;s so&#10;over</div>
+          <div class="label" style="left:60%;top:60%;font-size:32px;font-weight:900">We&#10;vibing</div>
+          <div class="label" style="left:0.5%;top:85%;font-size:9px;font-weight:500">Mom would&#10;be sad</div>
+          <!-- SVG dots layer -->
+          <svg id="dots" style="position:absolute;inset:0;width:100%;height:100%;z-index:10;pointer-events:none"></svg>
+        </div>
+        <div class="x-axis">← Unpleasant to Pleasant →</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-table">
+    <div class="table-header">recorded moods <span class="table-count" id="count"></span></div>
+    <table>
+      <thead><tr><th>date</th><th>time</th><th>mood</th><th>notes</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+// Sample entries — benign demo data
+const ENTRIES = [
+  { valence: 9.1, arousal: 8.2, note: "flow state, everything clicking",        ts: new Date("2026-06-05T14:47:12") },
+  { valence: 8.4, arousal: 7.5, note: "solved a gnarly bug, feeling sharp",     ts: new Date("2026-06-05T13:03:44") },
+  { valence: 7.2, arousal: 6.8, note: "coffee kicked in, ready to code",        ts: new Date("2026-06-05T10:31:09") },
+  { valence: 6.8, arousal: 5.4, note: "productive morning energy",              ts: new Date("2026-06-05T09:15:33") },
+  { valence: 6.2, arousal: 4.1, note: "winding down for the evening",           ts: new Date("2026-06-04T21:58:22") },
+  { valence: 4.3, arousal: 5.8, note: "procrastinating but not panicking",      ts: new Date("2026-06-04T19:44:17") },
+  { valence: 5.1, arousal: 3.2, note: "post-lunch slump, need a walk",          ts: new Date("2026-06-04T15:20:51") },
+]
+
+function vibeColor(v, a) {
+  const hue = ((v - 1) / 9) * 120
+  const l   = 25 + ((a - 1) / 9) * 40
+  return `hsl(${hue.toFixed(1)},80%,${l.toFixed(1)}%)`
+}
+
+function toRel(v, a) {
+  return { rx: (v - 1) / 9, ry: 1 - (a - 1) / 9 }
+}
+
+function fmt(d) {
+  return {
+    date: `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`,
+    time: d.toLocaleTimeString()
+  }
+}
+
+// Render dots
+const svg = document.getElementById('dots')
+ENTRIES.forEach(e => {
+  const { rx, ry } = toRel(e.valence, e.arousal)
+  const c = document.createElementNS('http://www.w3.org/2000/svg','circle')
+  c.setAttribute('cx', `${rx*100}%`)
+  c.setAttribute('cy', `${ry*100}%`)
+  c.setAttribute('r',  '6')
+  c.setAttribute('fill', vibeColor(e.valence, e.arousal))
+  c.setAttribute('stroke', 'rgba(0,0,0,0.35)')
+  c.setAttribute('stroke-width', '1')
+  svg.appendChild(c)
+})
+
+// Render table
+const tbody = document.getElementById('tbody')
+document.getElementById('count').textContent = ENTRIES.length
+ENTRIES.forEach(e => {
+  const { date, time } = fmt(e.ts)
+  const color = vibeColor(e.valence, e.arousal)
+  const tr = document.createElement('tr')
+  tr.innerHTML = `
+    <td class="td-muted">${date}</td>
+    <td class="td-muted">${time}</td>
+    <td class="td-mono"><span class="dot" style="background:${color}"></span>(${e.valence}, ${e.arousal})</td>
+    <td class="td-note">${e.note}</td>
+  `
+  tbody.appendChild(tr)
+})
+</script>
+</body>
+</html>
