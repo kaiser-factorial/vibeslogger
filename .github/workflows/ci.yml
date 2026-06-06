@@ -1,0 +1,28 @@
+name: CI
+
+# Runs the type checker and test suite on every pull request and on pushes to
+# master, so broken types or failing tests are caught automatically.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Using `npm install` rather than `npm ci`: the committed lockfile isn't
+      # kept strictly in sync with package.json, and `npm ci` requires an exact match.
+      - run: npm install
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test

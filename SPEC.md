@@ -149,7 +149,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 - **Emotion wheel toggle**: overlays Russell Circumplex affect labels (e.g. "tense", "serene", "excited") as ghosted text at their canonical circumplex positions
 - **Explore mode toggle**: makes the grid read-only (no click-to-log); dots show a timestamp tooltip on hover. Useful for reviewing past entries without accidentally logging.
 - **Time-of-day glyphs**: each dot renders a small sun (logged 6:00–17:59) or crescent moon (18:00–5:59) SVG overlay, indicating time of day at logging. Moon uses an SVG mask (circle minus offset circle) for a proper crescent curve; each instance gets a unique mask ID via `useRef` to prevent DOM conflicts.
-- **Background**: body has two tiled linear-gradient layers (135° and 45°) at 0.17–0.20 opacity sampling the zone color palette, giving the page a subtle mood-map texture.
+- **Background**: body has two tiled linear-gradient layers (135° and 45°) at 0.11–0.13 opacity sampling the zone color palette, giving the page a subtle mood-map texture.
 - Responsive: scales font sizes at `<768px` via `labelScale = isMobile ? 0.58 : 1`
 
 ### Log Modal (`src/components/MoodModal.tsx`)
@@ -159,6 +159,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
   - "post to timeline" (default: on) → sets `public` column
   - "include note publicly" (shown only when public + note present) → sets `note_public`
 - Enter submits; Escape closes
+- **Theme preview**: the modal previews the accent this click is about to apply (see Dynamic Vibe Accent). The backdrop gets a faint radial wash of the clicked zone's color and the submit ("log it") button is the full zone color, while the modal's own controls stay neutral cream/charcoal. Implemented by setting CSS vars inline on the backdrop: `--accent*` are overridden to the neutral palette (`paletteFor(null)`) and `--preview-*` carry the zone palette, which only `.btn-primary--preview` consumes.
 
 ### Mood Table (`src/components/MoodTable.tsx`)
 - Lists all entries for the logged-in user, newest first
@@ -186,6 +187,14 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 - **Feed filter**: toggle between "everyone" (all public vibes) and "following (N)" (own entries + followed users' entries)
 - **Cursor-based pagination**: loads 20 entries at a time using `.lt('created_at', cursor)`. A "load more" button appears at the bottom of the everyone feed when more entries exist. Profile lookups are batched per page (only new user IDs fetched, accumulated across pages via `useRef`).
 - **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score and a follow/unfollow button per row. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
+
+### Dynamic Vibe Accent (`src/lib/accent.ts` + `src/hooks/useAccent.ts`)
+- The site's accent color (buttons, focus rings, active tabs, glows, own-entry tints) is dynamic. Before any vibe is logged this session — including the auth screen — it is a neutral **cream/charcoal** scheme.
+- When a vibe is logged, `App.handleModalSubmit` calls `setAccentFromVibe(valence, arousal)`, which maps the click to a zone via `getZone()` and repaints the accent in that zone's color (e.g. logging in the yellow "LFG" area → yellow accents).
+- The accent is driven by CSS custom properties on `:root` (`--accent`, `--accent-hover`, `--accent-ink`, `--accent-rgb`, `--accent-glow`); `applyAccent()` sets them all at once. `--accent-ink` (button text) is chosen per zone by perceptual luminance so light accents like yellow get dark text.
+- **Persistence:** the chosen zone is stored in `sessionStorage` (`vl-accent-zone`), so it survives reloads within the browser session but resets to cream on sign-out or when a different user signs in. `--danger` (red) is intentionally left fixed for destructive actions (delete, unfollow).
+- **Neutral chrome:** all non-accent UI chrome (surfaces, borders, input/hover backgrounds, tooltips) uses neutral charcoal grays rather than the previous blue/purple-tinted darks, so the dynamic accent and the rainbow background carry the color. Exceptions that stay colored on purpose: the seven zone squares in `MoodGrid`, the background gradient, and the valence/arousal trend-line series in `Analysis` (two distinct data colors).
+- **Palette tokens:** the neutral charcoal→off-white scale lives as named CSS variables in `index.css` `:root` (`--surface-*`, `--track`, `--hairline`, `--elevate`, `--border-*`, `--fg-*`), ordered dark→light, so the whole theme is retunable from one place. The two trend-line colors are `--chart-valence` / `--chart-arousal`; because SVG presentation attributes can't read `var()`, the chart applies them via classes (`.trend-stroke-v/a`, `.trend-fill-v/a`, `.trend-grid`) and the text spans via inline `style`.
 
 ### Auth (`src/components/Auth.tsx`)
 - Two tabs: magic link (OTP email) and email/password
@@ -255,7 +264,9 @@ src/
     useTimeline.ts        fetches public entries + profiles; cursor-based pagination
     useFollows.ts         follow/unfollow state with optimistic updates + error revert
     useProfile.ts         fetch + update username from profiles table
+    useAccent.ts          dynamic UI accent: cream default → most-recent-vibe zone color
   lib/
+    accent.ts             accent palette computation + apply to :root CSS vars
     database.types.ts     Supabase schema types (vibes, profiles, follows)
     supabase.ts           Supabase client init (plain, non-generic — see §2)
     vibeColor.ts          HSL color encoding from (valence, arousal)
@@ -304,6 +315,7 @@ Items are loosely ordered by effort/value. Nothing here is committed — all are
 - ✓ **Time-of-day analysis** — analysis section bucketing entries by morning/afternoon/evening/night with count and avg v/a per slot
 - ✓ **JSON export** — `↓ json` button alongside CSV; exports filtered slice with all fields including zone
 - ✓ **Shareable vibe card** — `↗` on public entries opens share modal; "copy link" produces a `?share=<token>` URL with base64-encoded vibe data. `PublicShareView` renders the card without auth for any share URL.
+- ✓ **Dynamic vibe accent** — UI accent defaults to cream/charcoal and recolors to the most recently logged vibe's zone color; session-scoped (resets to cream on sign-out). See `src/lib/accent.ts`.
 - ✓ **PWA service worker** — `public/sw.js`: cache-first for `/assets/` (Vite content-hashed bundles), network-first for navigation, pass-through for Supabase. Registered in `main.tsx`.
 
 ### Longer-term / speculative
@@ -332,3 +344,18 @@ Show a "follows you back" badge next to usernames in similar vibers. Requires a 
 - **Timeline pagination only applies to the "everyone" feed.** The "following" filter is applied client-side over already-loaded entries, so it only covers the pages fetched so far.
 - **Share links encode vibe data client-side** — they are not validated against the DB when viewed. A share link for a private-later-made vibe will still show the original data.
 - **PWA is not offline-capable for data.** Static assets are cached; Supabase API calls are always network-only. The app requires connectivity to log or fetch vibes.
+- **`package-lock.json` is out of sync with `package.json`.** The committed lockfile is missing entries (e.g. several `esbuild` platform packages), so `npm ci` fails with `EUSAGE` ("can only install packages when your package.json and package-lock.json ... are in sync"). Use `npm install` instead, which reconciles the difference. For this reason the CI workflow (§10) runs `npm install`, not `npm ci`. The lockfile could be regenerated (`npm install` then commit the result) in a standalone cleanup if a reproducible `npm ci` is wanted.
+
+---
+
+## 10. Continuous Integration
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `master`:
+
+1. Checkout (`actions/checkout@v4`)
+2. Node 22 (`actions/setup-node@v4`)
+3. `npm install` — **not `npm ci`**, because the committed lockfile is out of sync (see §9)
+4. `npm run typecheck` (`tsc --noEmit`)
+5. `npm test` (`vitest run` — the full suite)
+
+A failing type check or test blocks the green check on the PR. This is separate from Vercel, which independently builds and deploys a preview on each push (the `Vercel` status check). No env vars are needed in CI: the only test that touches Supabase (`follows.test.ts`) mocks `../lib/supabase`, and the rest are pure logic or props-driven.

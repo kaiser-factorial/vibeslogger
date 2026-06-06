@@ -293,10 +293,10 @@ function TrendLine({ vibes }: { vibes: Vibe[] }) {
       <div className="analysis-section-title">trends</div>
       <div className="analysis-section-sub">daily average valence and arousal</div>
       <div className="trend-indicators">
-        <span className="trend-badge" style={{ color: '#4896A8' }}>
+        <span className="trend-badge" style={{ color: 'var(--chart-valence)' }}>
           valence {slopeArrow(vSlope)}
         </span>
-        <span className="trend-badge" style={{ color: '#D08020' }}>
+        <span className="trend-badge" style={{ color: 'var(--chart-arousal)' }}>
           arousal {slopeArrow(aSlope)}
         </span>
         <span className="trend-days">{series.length} days</span>
@@ -311,26 +311,26 @@ function TrendLine({ vibes }: { vibes: Vibe[] }) {
           const y = PAD_Y + ((1 - (v - 1) / 9) * (H - 2 * PAD_Y))
           return (
             <line key={v} x1={PAD_X} y1={y} x2={W - PAD_X} y2={y}
-              stroke="#1a1a1a" strokeWidth="0.5" />
+              className="trend-grid" strokeWidth="0.5" />
           )
         })}
         {/* Regression lines (dashed) */}
         <path d={regressionPath(series.map(d => d.avgValence))}
-          fill="none" stroke="#4896A8" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
+          fill="none" className="trend-stroke-v" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
         <path d={regressionPath(series.map(d => d.avgArousal))}
-          fill="none" stroke="#D08020" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
+          fill="none" className="trend-stroke-a" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
         {/* Sparklines */}
-        <path d={toPath(vPts)} fill="none" stroke="#4896A8" strokeWidth="1.8"
+        <path d={toPath(vPts)} fill="none" className="trend-stroke-v" strokeWidth="1.8"
           strokeLinecap="round" strokeLinejoin="round" />
-        <path d={toPath(aPts)} fill="none" stroke="#D08020" strokeWidth="1.8"
+        <path d={toPath(aPts)} fill="none" className="trend-stroke-a" strokeWidth="1.8"
           strokeLinecap="round" strokeLinejoin="round" />
         {/* Dots */}
-        {vPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#4896A8" />)}
-        {aPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#D08020" />)}
+        {vPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" className="trend-fill-v" />)}
+        {aPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" className="trend-fill-a" />)}
       </svg>
       <div className="trend-legend">
-        <span style={{ color: '#4896A8' }}>— valence</span>
-        <span style={{ color: '#D08020' }}>— arousal</span>
+        <span style={{ color: 'var(--chart-valence)' }}>— valence</span>
+        <span style={{ color: 'var(--chart-arousal)' }}>— arousal</span>
         <span className="trend-legend-note">dashed = regression</span>
       </div>
     </div>
