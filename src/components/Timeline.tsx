@@ -95,7 +95,7 @@ function SimilarVibers({ entries, currentUserId, followingIds, follow, unfollow 
 }
 
 export default function Timeline({ session, followingIds, follow, unfollow }: Props) {
-  const { entries, loading } = useTimeline(session)
+  const { entries, loading, loadingMore, hasMore, loadMore } = useTimeline(session)
   const [filter, setFilter] = useState<FeedFilter>('everyone')
 
   if (loading) return <div className="loading">loading timeline...</div>
@@ -165,6 +165,16 @@ export default function Timeline({ session, followingIds, follow, unfollow }: Pr
             )
           })}
         </div>
+      )}
+
+      {filter === 'everyone' && (hasMore || loadingMore) && (
+        <button
+          className="tl-load-more"
+          onClick={loadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? 'loading...' : 'load more'}
+        </button>
       )}
     </div>
   )

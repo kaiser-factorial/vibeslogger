@@ -8,8 +8,10 @@ import MoodModal from './components/MoodModal'
 import Analysis from './components/Analysis'
 import Timeline from './components/Timeline'
 import SetPasswordModal from './components/SetPasswordModal'
+import EditUsernameModal from './components/EditUsernameModal'
 import useVibes from './hooks/useVibes'
 import useFollows from './hooks/useFollows'
+import useProfile from './hooks/useProfile'
 import type { PendingVibe } from './types'
 
 type View = 'log' | 'analysis' | 'timeline'
@@ -20,13 +22,15 @@ export default function App() {
   const [expanded,    setExpanded]    = useState(() => localStorage.getItem('vl-has-vibes') === 'true')
   const [view,        setView]        = useState<View>('log')
   const [pendingVibe,     setPendingVibe]     = useState<PendingVibe | null>(null)
-  const [settingPassword, setSettingPassword] = useState(false)
+  const [settingPassword,  setSettingPassword]  = useState(false)
+  const [editingUsername,  setEditingUsername]  = useState(false)
   const [showLabels,      setShowLabels]      = useState(true)
   const [showEmotions,    setShowEmotions]    = useState(false)
   const [exploreMode,     setExploreMode]     = useState(false)
 
   const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
   const { followingIds, follow, unfollow } = useFollows(session)
+  const { username, updateUsername } = useProfile(session)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -75,6 +79,11 @@ export default function App() {
             )}
           </div>
           <div className="header-actions">
+            {username && (
+              <button className="btn-username" onClick={() => setEditingUsername(true)}>
+                @{username}
+              </button>
+            )}
             <button className="btn-setpw" onClick={() => setSettingPassword(true)}>
               set password
             </button>
@@ -149,6 +158,14 @@ export default function App() {
 
       {settingPassword && (
         <SetPasswordModal onClose={() => setSettingPassword(false)} />
+      )}
+
+      {editingUsername && username && (
+        <EditUsernameModal
+          currentUsername={username}
+          onSave={updateUsername}
+          onClose={() => setEditingUsername(false)}
+        />
       )}
 
       {pendingVibe && (

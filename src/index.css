@@ -367,6 +367,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .btn-setpw:hover { color: var(--muted); }
 .btn-setpw:active { transform: scale(0.94); }
 
+.btn-username {
+  background: none; border: none; color: var(--accent);
+  cursor: pointer; font-size: 11px; font-family: inherit; padding: 0;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.btn-username:hover { opacity: 0.75; }
+.btn-username:active { transform: scale(0.94); }
+
 .btn-delete {
   background: none; border: none; color: #505050;
   cursor: pointer; font-size: 15px; padding: 0 4px;
@@ -685,6 +693,16 @@ button { -webkit-tap-highlight-color: transparent; }
 .tl-zone { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
 .tl-meta { font-size: 10px; color: #444; margin-left: auto; white-space: nowrap; }
 .tl-note { font-size: 11px; color: #888; line-height: 1.4; }
+
+.tl-load-more {
+  display: block; width: 100%; margin-top: 16px;
+  background: none; border: 1px solid #252540;
+  color: var(--muted); font-family: inherit; font-size: 11px;
+  padding: 10px; border-radius: 4px; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.tl-load-more:hover:not(:disabled) { border-color: #3a3a6a; color: var(--text); }
+.tl-load-more:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Timeline header row (title + filter toggle) ── */
 .timeline-header-row {
