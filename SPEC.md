@@ -137,7 +137,7 @@ Each logged vibe is rendered as a colored dot. Color encodes both dimensions:
 
 Low-arousal states get dark, muted colors; high-arousal states get bright, vivid ones.
 
-`vibeColor` still drives the **Timeline** dots and the **share cards**. The **mood grid points** (in explore mode) and the **"recorded moods" table dots** instead use `gridColor(valence, arousal)` from `lib/zones.ts`, which returns the bright vibe-square color of the zone the point sits in (`GRID_ZONE_COLOR`). This makes a logged mood's dot match the square it lives in and match across the grid and table. (Three palettes coexist by design: muted `ZONE_META` for accents/labels, bright `GRID_ZONE_COLOR` for the square/points/table dots, and the `vibeColor` HSL gradient for timeline/share.)
+The **mood grid points** (in explore mode), the **"recorded moods" table dots**, and the **timeline dots** all use `gridColor(valence, arousal)` from `lib/zones.ts`, which returns the bright vibe-square color of the zone the point sits in (`GRID_ZONE_COLOR`). This makes a logged mood's dot match the square it lives in, consistently across grid, table, and timeline. `vibeColor` (HSL) now only drives the **share cards**. (Three palettes coexist by design: muted `ZONE_META` for accents/labels, bright `GRID_ZONE_COLOR` for square/points/table/timeline dots, and the `vibeColor` HSL gradient for share cards.)
 
 ---
 
@@ -184,7 +184,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 
 ### Timeline (`src/components/Timeline.tsx`)
 - Feed of all `public = true` entries from all users
-- Each entry: colored dot, zone label (in zone color), `@username`, time-ago, optional note (if `note_public = true`)
+- Each entry: a `gridColor` dot (matching the grid/table), zone label (in `ZONE_META` color), `@username`, time-ago, optional note (if `note_public = true`). Entries render as translucent dark cards (with a shadow on the meta text) so `@username` · time-ago stay legible over the rainbow page background.
 - Own entries highlighted subtly
 - **Feed filter**: toggle between "everyone" (all public vibes) and "following (N)" (own entries + followed users' entries)
 - **Cursor-based pagination**: loads 20 entries at a time using `.lt('created_at', cursor)`. A "load more" button appears at the bottom of the everyone feed when more entries exist. Profile lookups are batched per page (only new user IDs fetched, accumulated across pages via `useRef`).

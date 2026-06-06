@@ -723,11 +723,19 @@ button { -webkit-tap-highlight-color: transparent; }
 .tl-entry {
   display: flex; align-items: flex-start; gap: 12px;
   padding: 10px 12px; border-radius: 5px;
-  transition: background 0.12s;
+  /* Translucent dark card so text stays readable over the rainbow page bg */
+  background: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.12s, border-color 0.12s;
 }
-.tl-entry:hover { background: var(--surface-low); }
-.tl-entry--own { background: rgba(var(--accent-rgb), 0.05); }
-.tl-entry--own:hover { background: rgba(var(--accent-rgb), 0.10); }
+.tl-entry:hover { background: rgba(22, 22, 22, 0.65); }
+.tl-entry--own {
+  background: linear-gradient(rgba(var(--accent-rgb), 0.08), rgba(var(--accent-rgb), 0.08)), rgba(10, 10, 10, 0.55);
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+.tl-entry--own:hover {
+  background: linear-gradient(rgba(var(--accent-rgb), 0.14), rgba(var(--accent-rgb), 0.14)), rgba(22, 22, 22, 0.65);
+}
 
 .tl-dot {
   flex-shrink: 0;
@@ -737,8 +745,11 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 .tl-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .tl-top  { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.tl-zone { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; }
-.tl-meta { font-size: 10px; color: var(--fg-faint); margin-left: auto; white-space: nowrap; }
+.tl-zone { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+.tl-meta {
+  font-size: 10px; color: var(--fg-soft); margin-left: auto; white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
 .tl-note { font-size: 11px; color: var(--fg-soft); line-height: 1.4; }
 
 .tl-load-more {

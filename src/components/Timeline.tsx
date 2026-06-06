@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import useTimeline from '../hooks/useTimeline'
-import { getZone, ZONE_META, ZONE_ORDER } from '../lib/zones'
+import { getZone, gridColor, ZONE_META, ZONE_ORDER } from '../lib/zones'
 import type { ZoneId } from '../lib/zones'
-import { vibeColor } from '../lib/vibeColor'
 import type { TimelineEntry } from '../types'
 
 interface Props {
@@ -151,7 +150,7 @@ export default function Timeline({ session, followingIds, follow, unfollow }: Pr
             const isOwn = e.user_id === session.user.id
             return (
               <div key={e.id} className={`tl-entry${isOwn ? ' tl-entry--own' : ''}`}>
-                <span className="tl-dot" style={{ background: vibeColor(e.valence, e.arousal) }} />
+                <span className="tl-dot" style={{ background: gridColor(e.valence, e.arousal) }} />
                 <div className="tl-body">
                   <div className="tl-top">
                     <span className="tl-zone" style={{ color: meta.color }}>{meta.label}</span>
