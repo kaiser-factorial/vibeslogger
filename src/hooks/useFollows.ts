@@ -32,18 +32,24 @@ export default function useFollows(session: Session | null): UseFollowsReturn {
 
   const follow = useCallback(async (userId: string) => {
     setFollowingIds(prev => new Set([...prev, userId]))
-    await supabase
+    const { error } = await supabase
       .from('follows')
       .insert({ follower_id: session!.user.id, followee_id: userId })
+    if (error) {
+      setFollowingIds(prev => { const s = new Set(prev); s.delete(userId); return s })
+    }
   }, [session])
 
   const unfollow = useCallback(async (userId: string) => {
     setFollowingIds(prev => { const s = new Set(prev); s.delete(userId); return s })
-    await supabase
+    const { error } = await supabase
       .from('follows')
       .delete()
       .eq('follower_id', session!.user.id)
       .eq('followee_id', userId)
+    if (error) {
+      setFollowingIds(prev => new Set([...prev, userId]))
+    }
   }, [session])
 
   return { followingIds, loading, follow, unfollow }

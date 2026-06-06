@@ -26,6 +26,29 @@ added the `<link>` for IBM Plex Mono. it was referenced in CSS but never loaded 
 so the app was silently falling back to Courier New everywhere.
 *why:* the font is central to the vibe; not loading it was a quiet bug.
 
+### undo delete
+replaced the 2-click confirm with a 5-second undo toast. the row disappears immediately (optimistic),
+a sticky toast shows "entry deleted · undo (Xs)" with a live countdown, and the real Supabase DELETE
+fires only when the timer expires. all state in `MoodTable` — no hook changes needed.
+*why:* two-click confirm was unnecessary friction; this feels snappier and recoverable.
+
+### export CSV
+"↓ csv" button in the analysis filter row, disabled when the filtered set is empty. exports only
+the currently filtered slice so date filters compose naturally with the download.
+headers: date, time, valence, arousal, zone, note.
+*why:* basic data ownership; zero-dependency browser-native Blob + anchor approach.
+
+### trend line
+daily-average valence/arousal sparklines + dashed least-squares regression overlays in the analysis
+panel. ↑↓→ direction arrows show trajectory at a glance. appears only when there are ≥2 days of data.
+*why:* heatmap shows density but not direction; sparklines show whether things are moving.
+
+### friends / following system
+follows table (follower\_id, followee\_id) with RLS. `useFollows` hook with optimistic follow/unfollow.
+"similar vibers" section ranks users by cosine-style zone-distribution similarity and shows a follow
+button per row. timeline header toggles between everyone / following (N).
+*note:* requires the follows SQL to be run in Supabase — see session context for the migration.
+
 ---
 
 ## not implemented — open for discussion
@@ -40,11 +63,6 @@ whether that's the right energy.
 break down entries by morning / afternoon / evening / night.
 "you tend to hit *we vibing* in the evenings" type insight.
 *trade-off:* needs a decent volume of data before it's meaningful; could add noise early on.
-
-### trend line on valence/arousal over time
-a simple sparkline or linear regression showing whether your average valence or arousal
-has been trending up or down over a configurable window (last 7 days, 30 days, etc).
-*trade-off:* React + pure CSS is fine for sparklines but may push toward a charting library.
 
 ### emotion wheel overlay
 overlay Russell's canonical affect labels (excited, happy, content, serene, sad, bored,
@@ -78,11 +96,26 @@ works but the app doesn't function offline.
 *trade-off:* a cache-first service worker for a Supabase-backed app needs careful
 cache invalidation strategy. worth doing once the data model is stable.
 
-### undo delete
-replace the 2-click confirm with a brief undo toast (5-second window before the delete
-actually commits to Supabase).
-*trade-off:* needs a timeout + cancel mechanic; small UX win.
+### JSON export option
+the current export is CSV-only; a JSON download would preserve types (no string-coercion of numbers)
+and be easier to re-import or pass to a script.
+*trade-off:* most spreadsheet users expect CSV; could add a second button or a dropdown picker.
 
-### export (CSV / JSON)
-a button in the analysis panel that downloads all (or filtered) entries.
-*trade-off:* trivial to implement; just haven't done it yet.
+### timeline pagination / cursor loading
+the timeline currently fetches all public entries in one query. fine now, will break at scale.
+options: offset pagination (cheap to add, bad for live feeds) or cursor-based (better for real-time).
+*trade-off:* adds complexity to `useTimeline`; worth revisiting once there are >500 rows.
+
+### trend window selector
+the sparkline shows the full filtered range; a quick-select (7d / 30d / all) in the trends section
+would let users focus on recent trajectory without touching the main date filters.
+*trade-off:* the date filters already cover this; a dedicated selector is a convenience, not a blocker.
+
+### mutual follows / follow-back indicator
+show a "follows you back" badge next to usernames in similar vibers when the relationship is mutual.
+*trade-off:* requires a second query or a join; adds social-graph complexity.
+
+### follower-count display
+show each user's follower count in similar vibers so users know who's popular.
+*trade-off:* could create a popularity hierarchy that feels at odds with the personal/introspective
+tone of the app.
