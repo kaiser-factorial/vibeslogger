@@ -149,7 +149,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 - **Emotion wheel toggle**: overlays Russell Circumplex affect labels (e.g. "tense", "serene", "excited") as ghosted text at their canonical circumplex positions
 - **Explore mode toggle**: makes the grid read-only (no click-to-log); dots show a timestamp tooltip on hover. Useful for reviewing past entries without accidentally logging.
 - **Time-of-day glyphs**: each dot renders a small sun (logged 6:00–17:59) or crescent moon (18:00–5:59) SVG overlay, indicating time of day at logging. Moon uses an SVG mask (circle minus offset circle) for a proper crescent curve; each instance gets a unique mask ID via `useRef` to prevent DOM conflicts.
-- **Background**: body has two tiled linear-gradient layers (135° and 45°) at 0.17–0.20 opacity sampling the zone color palette, giving the page a subtle mood-map texture.
+- **Background**: body has two tiled linear-gradient layers (135° and 45°) at 0.11–0.13 opacity sampling the zone color palette, giving the page a subtle mood-map texture.
 - Responsive: scales font sizes at `<768px` via `labelScale = isMobile ? 0.58 : 1`
 
 ### Log Modal (`src/components/MoodModal.tsx`)
@@ -186,6 +186,12 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 - **Feed filter**: toggle between "everyone" (all public vibes) and "following (N)" (own entries + followed users' entries)
 - **Cursor-based pagination**: loads 20 entries at a time using `.lt('created_at', cursor)`. A "load more" button appears at the bottom of the everyone feed when more entries exist. Profile lookups are batched per page (only new user IDs fetched, accumulated across pages via `useRef`).
 - **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score and a follow/unfollow button per row. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
+
+### Dynamic Vibe Accent (`src/lib/accent.ts` + `src/hooks/useAccent.ts`)
+- The site's accent color (buttons, focus rings, active tabs, glows, own-entry tints) is dynamic. Before any vibe is logged this session — including the auth screen — it is a neutral **cream/charcoal** scheme.
+- When a vibe is logged, `App.handleModalSubmit` calls `setAccentFromVibe(valence, arousal)`, which maps the click to a zone via `getZone()` and repaints the accent in that zone's color (e.g. logging in the yellow "LFG" area → yellow accents).
+- The accent is driven by CSS custom properties on `:root` (`--accent`, `--accent-hover`, `--accent-ink`, `--accent-rgb`, `--accent-glow`); `applyAccent()` sets them all at once. `--accent-ink` (button text) is chosen per zone by perceptual luminance so light accents like yellow get dark text.
+- **Persistence:** the chosen zone is stored in `sessionStorage` (`vl-accent-zone`), so it survives reloads within the browser session but resets to cream on sign-out or when a different user signs in. `--danger` (red) is intentionally left fixed for destructive actions (delete, unfollow).
 
 ### Auth (`src/components/Auth.tsx`)
 - Two tabs: magic link (OTP email) and email/password
@@ -255,7 +261,9 @@ src/
     useTimeline.ts        fetches public entries + profiles; cursor-based pagination
     useFollows.ts         follow/unfollow state with optimistic updates + error revert
     useProfile.ts         fetch + update username from profiles table
+    useAccent.ts          dynamic UI accent: cream default → most-recent-vibe zone color
   lib/
+    accent.ts             accent palette computation + apply to :root CSS vars
     database.types.ts     Supabase schema types (vibes, profiles, follows)
     supabase.ts           Supabase client init (plain, non-generic — see §2)
     vibeColor.ts          HSL color encoding from (valence, arousal)
@@ -304,6 +312,7 @@ Items are loosely ordered by effort/value. Nothing here is committed — all are
 - ✓ **Time-of-day analysis** — analysis section bucketing entries by morning/afternoon/evening/night with count and avg v/a per slot
 - ✓ **JSON export** — `↓ json` button alongside CSV; exports filtered slice with all fields including zone
 - ✓ **Shareable vibe card** — `↗` on public entries opens share modal; "copy link" produces a `?share=<token>` URL with base64-encoded vibe data. `PublicShareView` renders the card without auth for any share URL.
+- ✓ **Dynamic vibe accent** — UI accent defaults to cream/charcoal and recolors to the most recently logged vibe's zone color; session-scoped (resets to cream on sign-out). See `src/lib/accent.ts`.
 - ✓ **PWA service worker** — `public/sw.js`: cache-first for `/assets/` (Vite content-hashed bundles), network-first for navigation, pass-through for Supabase. Registered in `main.tsx`.
 
 ### Longer-term / speculative

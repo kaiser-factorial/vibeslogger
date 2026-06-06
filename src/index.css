@@ -8,10 +8,15 @@
   --text:        #e8e8e8;
   --muted:       #6a6a6a;
   --axis:        #8a8a8a;
-  --accent:      #e5392b;
-  --accent-hover:#f24a3c;
-  --accent-soft: rgba(229, 57, 43, 0.10);
-  --accent-ink:  #ffffff;
+  /* Accent is dynamic (set on :root by src/lib/accent.ts). These cream/charcoal
+     values are the neutral default shown before any vibe is logged this session
+     and on the auth screen — kept here so first paint never flashes a stale color. */
+  --accent:      #e7decb;
+  --accent-hover:#f3ecdb;
+  --accent-rgb:  231, 222, 203;
+  --accent-soft: rgba(var(--accent-rgb), 0.10);
+  --accent-glow: rgba(var(--accent-rgb), 0.45);
+  --accent-ink:  #1a1a1a;
   --danger:      #c62828;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
 }
@@ -23,14 +28,14 @@ body {
   overflow: hidden;
   background-image:
     linear-gradient(135deg,
-      rgba(165,40,40,0.20)   0 25%,
-      rgba(94,110,32,0.20)   25% 50%,
-      rgba(208,128,32,0.20)  50% 75%,
-      rgba(94,152,112,0.20)  75% 100%),
+      rgba(165,40,40,0.13)   0 25%,
+      rgba(94,110,32,0.13)   25% 50%,
+      rgba(208,128,32,0.13)  50% 75%,
+      rgba(94,152,112,0.13)  75% 100%),
     linear-gradient(45deg,
-      rgba(127,181,204,0.17) 0 33%,
-      rgba(212,204,32,0.17)  33% 66%,
-      rgba(80,80,168,0.17)   66% 100%);
+      rgba(127,181,204,0.11) 0 33%,
+      rgba(212,204,32,0.11)  33% 66%,
+      rgba(80,80,168,0.11)   66% 100%);
   background-size: 220px 220px, 300px 300px;
   background-attachment: fixed;
 }
@@ -221,7 +226,7 @@ body {
 }
 
 .btn-save {
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--accent-ink);
   border: none; border-radius: 3px; padding: 2px 7px;
   cursor: pointer; font-size: 10px; font-family: inherit;
   font-weight: 700; letter-spacing: 0.04em;
@@ -317,24 +322,24 @@ body {
 button { -webkit-tap-highlight-color: transparent; }
 
 .btn-primary {
-  flex: 1; background: var(--accent); color: #fff;
+  flex: 1; background: var(--accent); color: var(--accent-ink);
   border: none; border-radius: 4px; padding: 8px 0;
   cursor: pointer; font-size: 13px; font-weight: 700;
   font-family: inherit;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px rgba(229,57,43,0.4); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px var(--accent-glow); }
 .btn-primary:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .auth-form button {
-  background: var(--accent); color: #fff;
+  background: var(--accent); color: var(--accent-ink);
   border: none; border-radius: 4px; padding: 10px;
   cursor: pointer; font-size: 14px; font-weight: 700;
   font-family: inherit;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.auth-form button:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px rgba(229,57,43,0.4); }
+.auth-form button:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px var(--accent-glow); }
 .auth-form button:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
 .auth-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -675,8 +680,8 @@ button { -webkit-tap-highlight-color: transparent; }
   transition: background 0.12s;
 }
 .tl-entry:hover { background: #0d0d18; }
-.tl-entry--own { background: rgba(229,57,43,0.04); }
-.tl-entry--own:hover { background: rgba(229,57,43,0.09); }
+.tl-entry--own { background: rgba(var(--accent-rgb), 0.05); }
+.tl-entry--own:hover { background: rgba(var(--accent-rgb), 0.10); }
 
 .tl-dot {
   flex-shrink: 0;
@@ -875,14 +880,14 @@ button { -webkit-tap-highlight-color: transparent; }
   background-color: var(--bg);
   background-image:
     linear-gradient(135deg,
-      rgba(165,40,40,0.20)   0 25%,
-      rgba(94,110,32,0.20)   25% 50%,
-      rgba(208,128,32,0.20)  50% 75%,
-      rgba(94,152,112,0.20)  75% 100%),
+      rgba(165,40,40,0.13)   0 25%,
+      rgba(94,110,32,0.13)   25% 50%,
+      rgba(208,128,32,0.13)  50% 75%,
+      rgba(94,152,112,0.13)  75% 100%),
     linear-gradient(45deg,
-      rgba(127,181,204,0.17) 0 33%,
-      rgba(212,204,32,0.17)  33% 66%,
-      rgba(80,80,168,0.17)   66% 100%);
+      rgba(127,181,204,0.11) 0 33%,
+      rgba(212,204,32,0.11)  33% 66%,
+      rgba(80,80,168,0.11)   66% 100%);
   background-size: 220px 220px, 300px 300px;
 }
 .share-view-card {

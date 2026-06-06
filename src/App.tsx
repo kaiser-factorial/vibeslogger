@@ -13,6 +13,7 @@ import PublicShareView from './components/PublicShareView'
 import useVibes from './hooks/useVibes'
 import useFollows from './hooks/useFollows'
 import useProfile from './hooks/useProfile'
+import useAccent from './hooks/useAccent'
 import type { PendingVibe } from './types'
 
 type View = 'log' | 'analysis' | 'timeline'
@@ -35,6 +36,7 @@ export default function App() {
   const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
   const { followingIds, follow, unfollow } = useFollows(session)
   const { username, updateUsername } = useProfile(session)
+  const { setAccentFromVibe } = useAccent(session)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -61,7 +63,9 @@ export default function App() {
 
   async function handleModalSubmit(note: string, isPublic: boolean, isNotePublic: boolean) {
     if (!pendingVibe) return
-    await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note, isPublic, isNotePublic })
+    const { error } = await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note, isPublic, isNotePublic })
+    // Recolor the UI to match the just-logged vibe's zone.
+    if (!error) setAccentFromVibe(pendingVibe.x, pendingVibe.y)
     setPendingVibe(null)
   }
 
