@@ -136,8 +136,8 @@ body {
   border-radius: 4px;
 }
 .grid-area--explore { cursor: default; }
-/* Dim/desaturate zones slightly in explore mode so it reads as "browsing" */
-.grid-area--explore > div[style] { filter: saturate(0.62) brightness(0.82); transition: filter 0.25s ease; }
+/* Dim/desaturate zone backgrounds in explore mode; targets only .zone-bg, not points */
+.grid-area--explore > .zone-bg { filter: saturate(0.62) brightness(0.82); transition: filter 0.25s ease; }
 
 .x-axis {
   display: flex; align-items: center; justify-content: center;
@@ -217,7 +217,13 @@ body {
 }
 
 /* ── Table panel ── */
-.table-wrap { padding: 16px 14px; }
+.table-wrap {
+  padding: 16px 14px;
+  background: rgba(10, 10, 10, 0.50);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 6px;
+  margin: 8px;
+}
 
 .table-header {
   font-size: 12px; font-weight: 700; color: var(--fg-mid);

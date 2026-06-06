@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { getZone, ZONE_META } from '../lib/zones'
-import { vibeColor } from '../lib/vibeColor'
+import { getZone, ZONE_META, gridColor } from '../lib/zones'
 import type { Vibe } from '../types'
 
 interface Props {
@@ -32,7 +31,7 @@ export default function ShareModal({ vibe, onClose }: Props) {
 
   const zone    = getZone(vibe.valence, vibe.arousal)
   const meta    = ZONE_META[zone]
-  const color   = vibeColor(vibe.valence, vibe.arousal)
+  const color   = gridColor(vibe.valence, vibe.arousal)
   const date    = new Date(vibe.created_at).toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
   })
