@@ -18,13 +18,13 @@ const ZONES = [
 
 // Zone labels — cx/cy = center of zone, text centered via translate(-50%,-50%)
 const LABELS = [
-  { text: 'fuck it\nwe ball',         cx: '21%', cy: '22%', sz: 22,  fw: 900 },
-  { text: 'we are so\nfucking back',  cx: '64%', cy: '33%', sz: 17,  fw: 900 },
-  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 7.5, fw: 700 },
-  { text: 'it is\nwhat it is',        cx: '25%', cy: '52%', sz: 15,  fw: 700 },
-  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 20,  fw: 900 },
-  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 20,  fw: 900 },
-  { text: 'log off\nforever',         cx: '7%',  cy: '93%', sz: 7,   fw: 500 },
+  { text: 'fuck it\nwe ball',         cx: '21%', cy: '22%', sz: 28,  fw: 900 },
+  { text: 'we are so\nfucking back',  cx: '64%', cy: '33%', sz: 22,  fw: 900 },
+  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 9.5, fw: 700 },
+  { text: 'it is\nwhat it is',        cx: '25%', cy: '52%', sz: 19,  fw: 700 },
+  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 26,  fw: 900 },
+  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 26,  fw: 900 },
+  { text: 'log off\nforever',         cx: '7%',  cy: '93%', sz: 9,   fw: 500 },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
