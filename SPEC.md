@@ -1,7 +1,7 @@
 # vibeslogger — Project Specification
 
 **Status:** active development  
-**Stack:** Vite + React 18 · Supabase (Postgres + Auth) · Vercel  
+**Stack:** Vite + React 18 + TypeScript · Supabase (Postgres + Auth) · Vercel  
 **Repo:** `github.com/kaiser-factorial/vibeslogger` (auto-deploys `master` → Vercel)
 
 ---
@@ -15,7 +15,7 @@ Vibeslogger is a mood-tracking web app grounded in the **Russell Circumplex Mode
 
 Rather than asking users to name an emotion, the app asks them to click a point on a grid. That coordinate maps automatically to one of seven named **zones** with deliberately irreverent labels (see §4). The tone is self-aware internet culture, not clinical wellness.
 
-The app started as a personal logging tool and is expanding toward a lightweight social platform where users can see each other's public mood posts and discover people with similar emotional patterns.
+The app started as a personal logging tool and is expanding toward a lightweight social platform where users can see each other's public mood posts, follow each other, and discover people with similar emotional patterns.
 
 ---
 
@@ -23,18 +23,21 @@ The app started as a personal logging tool and is expanding toward a lightweight
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Frontend | Vite + React 18 (SPA) | No SSR, no TypeScript, no test suite |
+| Frontend | Vite + React 18 (SPA) | No SSR; TypeScript strict mode throughout |
 | Styling | Vanilla CSS (index.css) | IBM Plex Mono throughout; no CSS-in-JS |
 | Backend / DB | Supabase (Postgres) | RLS enforces all data isolation |
 | Auth | Supabase Auth | Magic link + email/password |
 | Hosting | Vercel | GitHub integration, auto-deploy on push to `master` |
 | Fonts | IBM Plex Mono via Google Fonts | Loaded in `index.html` |
+| Testing | Vitest + jsdom + @testing-library/react | 34 tests across logic, hooks, and components |
 
 **Environment variables** (set in Vercel + `.env.local` for local dev):
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=    ← anon/public key only, never service role
 ```
+
+**TypeScript note:** The project uses TypeScript 6. Due to a TS6 + supabase-js v2 incompatibility, `createClient` is called without the `Database` generic. Table row types are asserted explicitly in hooks instead (e.g. `as { data: Vibe[] | null }`). This gives equivalent type safety without relying on the library generic.
 
 ---
 
@@ -72,6 +75,22 @@ Display name store, one row per auth user.
 
 A Postgres trigger (`on_auth_user_created`) populates `profiles` automatically on each new signup. Existing users were backfilled with `split_part(email, '@', 1)`.
 
+### `follows`
+Tracks follow relationships between users.
+
+| Column | Type | Notes |
+|---|---|---|
+| `follower_id` | uuid (PK, FK) | FK → `auth.users.id` |
+| `followee_id` | uuid (PK, FK) | FK → `auth.users.id` |
+| `created_at` | timestamptz | set by Supabase |
+
+Primary key is `(follower_id, followee_id)` — prevents duplicate follows.
+
+**RLS on `follows`:**
+- `SELECT`: own rows only (`auth.uid() = follower_id`)
+- `INSERT`: own rows only
+- `DELETE`: own rows only
+
 ---
 
 ## 4. Zone System
@@ -86,17 +105,17 @@ Zones are the core classification concept. Every (valence, arousal) coordinate m
 | `back` | we are so fucking back | `#4a7a1e` | Top-right quadrant (olive) |
 | `ball` | fuck it we ball | `#8a2020` | Top-left quadrant (red) |
 | `over` | it's so over | `#407A96` | Bottom-left (light blue) |
-| `vibing` | we vibing | `#4896A8` | Bottom-right (sage green) |
+| `vibing` | we vibing | `#4896A8` | Bottom-right (sage) |
 | `whatitis` | it is what it is | `#916018` | Center-left band + narrow column (orange, upside-down T) |
 | `mwbs` | log off forever | `#484898` | Bottom-left corner (v≤2.4, a≤2.2) |
 
-### Classification Logic (`src/lib/zones.js`)
+### Classification Logic (`src/lib/zones.ts`)
 
 Split points derived from an SVG mockup (615×615px grid):
 - Valence splits: **4.8** (42%), **6.1** (57%), **8.0** (78%)
 - Arousal splits: **4.5** (61% from top), **6.1** (43% from top), **8.4** (18% from top)
 
-```js
+```
 getZone(valence, arousal):
   if v≥8.0 && a≥8.4   → lfg
   if v≤2.4 && a≤2.2   → mwbs
@@ -107,30 +126,30 @@ getZone(valence, arousal):
   else                 → vibing
 ```
 
-The "it is what it is" zone is intentionally unusual: it forms an upside-down T shape, with a wide horizontal band across the middle of the grid and a narrow column dropping down through the center. This requires two rectangles in the visual layer and two code paths in `getZone`.
+The "it is what it is" zone is intentionally unusual: it forms an upside-down T shape, with a wide horizontal band across the middle and a narrow column dropping through the center. This requires two rectangles in the visual layer and two code paths in `getZone`.
 
-### Dot Color Encoding (`src/lib/vibeColor.js`)
+### Dot Color Encoding (`src/lib/vibeColor.ts`)
 
 Each logged vibe is rendered as a colored dot. Color encodes both dimensions:
 - **Hue** = valence (0° = red/unpleasant → 120° = green/pleasant)
 - **Saturation** = arousal (35% at low energy → 90% at high)
 - **Lightness** = arousal (28% at low energy → 50% at high)
 
-This gives low-arousal states dark, muted colors and high-arousal states bright, vivid ones.
+Low-arousal states get dark, muted colors; high-arousal states get bright, vivid ones.
 
 ---
 
 ## 5. Feature Inventory (current)
 
-### Mood Grid (`src/components/MoodGrid.jsx`)
+### Mood Grid (`src/components/MoodGrid.tsx`)
 - Full-viewport clickable grid; click places a pending dot
 - SVG overlay renders all logged dots with vibe color encoding
 - Zone backgrounds rendered as absolute-positioned divs (using `left/top/right/bottom` %)
-- **Labels toggle**: shows/hides zone text labels (Impact font, black, centered per zone)
+- **Labels toggle**: shows/hides zone text labels (black, centered per zone)
 - **Emotion wheel toggle**: overlays Russell Circumplex affect labels (e.g. "tense", "serene", "excited") as ghosted text at their canonical circumplex positions
 - Responsive: scales font sizes at `<768px` via `labelScale = isMobile ? 0.58 : 1`
 
-### Log Modal (`src/components/MoodModal.jsx`)
+### Log Modal (`src/components/MoodModal.tsx`)
 - Opens on grid click; shows coordinate, optional note textarea
 - Word count hint if 1–2 words (notes <3 words are excluded from word analysis)
 - **Privacy toggles:**
@@ -138,33 +157,36 @@ This gives low-arousal states dark, muted colors and high-arousal states bright,
   - "include note publicly" (shown only when public + note present) → sets `note_public`
 - Enter submits; Escape closes
 
-### Mood Table (`src/components/MoodTable.jsx`)
+### Mood Table (`src/components/MoodTable.tsx`)
 - Lists all entries for the logged-in user, newest first
 - **3-hour edit window**: edit + delete buttons visible for `created_at` within 3 hours; locked indicator (`·`) after that
 - Inline note editing: click edit → input replaces note cell → Enter saves, Escape cancels
-- Delete requires two clicks (confirm pattern)
-- 3-hour lock is enforced both client-side (UI hides buttons) and server-side (RLS UPDATE/DELETE policies)
+- **Undo delete**: clicking × immediately hides the row and shows a sticky toast ("entry deleted · undo (Xs)") with a 5-second live countdown. The actual Supabase `DELETE` fires only when the timer expires. Clicking undo cancels the timer and restores the row. Multiple simultaneous pending deletes are supported.
+- 3-hour lock enforced client-side (UI hides buttons) and server-side (RLS policies)
 
-### Analysis Panel (`src/components/Analysis.jsx`)
+### Analysis Panel (`src/components/Analysis.tsx`)
 - **Locked until 10 entries** (total, not date-filtered) — progress bar shown
 - **Date filter**: from/to inputs filter all sections below
+- **Export CSV**: "↓ csv" button in the filter row — downloads the current filtered slice. Disabled when filtered set is empty. Headers: date, time, valence, arousal, zone, note.
 - **Stats strip**: entry count, avg valence, avg arousal, note count (≥3 words)
-- **Heatmap**: 10×10 grid colored by entry density (opacity scaled to max in current filter window)
+- **Trend line**: daily-average valence and arousal sparklines with dashed least-squares regression overlays and ↑↓→ direction arrows. Appears when ≥2 calendar days of data exist in the filtered window.
+- **Heatmap**: 10×10 grid colored by entry density
 - **Zone breakdown**: horizontal bar chart sorted by frequency
 - **Word analysis**: top 5 words per zone, stop-words filtered, only notes with ≥3 words counted
 
-### Timeline (`src/components/Timeline.jsx`)
-- Global feed of all `public = true` entries from all users
+### Timeline (`src/components/Timeline.tsx`)
+- Feed of all `public = true` entries from all users
 - Each entry: colored dot, zone label (in zone color), `@username`, time-ago, optional note (if `note_public = true`)
 - Own entries highlighted subtly
-- **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
+- **Feed filter**: toggle between "everyone" (all public vibes) and "following (N)" (own entries + followed users' entries)
+- **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score and a follow/unfollow button per row. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
 
-### Auth (`src/components/Auth.jsx`)
+### Auth (`src/components/Auth.tsx`)
 - Two tabs: magic link (OTP email) and email/password
 - Sign-up/sign-in toggle in password mode
-- `emailRedirectTo: window.location.origin` (not `href` — avoids stale hash issues)
+- `emailRedirectTo: window.location.origin`
 
-### Set Password Modal (`src/components/SetPasswordModal.jsx`)
+### Set Password Modal (`src/components/SetPasswordModal.tsx`)
 - Accessible from header; allows users who signed in via magic link to set a password
 - Uses `supabase.auth.updateUser({ password })`
 
@@ -181,7 +203,7 @@ This gives low-arousal states dark, muted colors and high-arousal states bright,
 All data isolation is enforced at the Postgres RLS layer, not in application code. The frontend uses the anon key only — no service role key is ever exposed. Client-side checks (e.g. hiding edit buttons after 3 hours) are UX, not security.
 
 ### Optimistic updates
-`useVibes` applies mutations locally before the Supabase round-trip completes. On error the optimistic update is not rolled back (this is a known gap — low stakes for a personal tool, but worth fixing if the app becomes multi-user-heavy).
+`useVibes` applies mutations locally before the Supabase round-trip completes. On error the optimistic update is not rolled back (known gap — low stakes for a personal tool). `useFollows` does roll back optimistic follow/unfollow on error.
 
 ### Timeline data fetching strategy
 Timeline uses two sequential queries (vibes → profiles for unique user IDs) joined in JS, rather than a PostgREST relationship join. This sidesteps the FK chain (`vibes.user_id → auth.users → profiles`) which PostgREST can't traverse automatically without explicit FK declarations.
@@ -190,7 +212,10 @@ Timeline uses two sequential queries (vibes → profiles for unique user IDs) jo
 Zone rectangles use `left/top/right/bottom` CSS positioning (not `left/top/width/height`). This avoids subpixel rounding gaps between zones. The orange "whatitis" zone requires two overlapping `z-index: 2` rectangles.
 
 ### 3-hour mutation window
-`LOCK_AFTER_MS = 3 * 60 * 60 * 1000` in `MoodTable.jsx` matches the RLS policy `created_at > now() - interval '3 hours'`. If this value changes it must be updated in both places.
+`LOCK_AFTER_MS = 3 * 60 * 60 * 1000` in `MoodTable.tsx` matches the RLS policy `created_at > now() - interval '3 hours'`. If this value changes it must be updated in both places.
+
+### Undo delete architecture
+All undo logic lives in `MoodTable` — no changes to `useVibes`. A `pendingDeletes: Map<string, PendingDelete>` tracks hidden rows and their timer IDs. `displayedVibes = vibes.filter(v => !pendingDeletes.has(v.id))` drives rendering. The actual `onDelete` callback fires only when the 5-second `setTimeout` expires.
 
 ---
 
@@ -199,31 +224,41 @@ Zone rectangles use `left/top/right/bottom` CSS positioning (not `left/top/width
 ```
 src/
   components/
-    Auth.jsx              magic link + password auth UI
-    Analysis.jsx          full analysis panel (locked until 10 entries)
-    MoodGrid.jsx          the clickable 2D grid with zones/dots/overlays
-    MoodModal.jsx         post-click entry modal (note + privacy toggles)
-    MoodTable.jsx         entries list with inline edit + 3hr lock
-    SetPasswordModal.jsx  upgrade magic-link account to password auth
-    Timeline.jsx          global feed + similar vibers
+    Auth.tsx              magic link + password auth UI
+    Analysis.tsx          full analysis panel (filter, export, trend, heatmap, etc.)
+    MoodGrid.tsx          the clickable 2D grid with zones/dots/overlays
+    MoodModal.tsx         post-click entry modal (note + privacy toggles)
+    MoodTable.tsx         entries list with inline edit, undo delete, 3hr lock
+    SetPasswordModal.tsx  upgrade magic-link account to password auth
+    Timeline.tsx          global feed, following filter, similar vibers + follow buttons
   hooks/
-    useVibes.js           CRUD for current user's entries (optimistic)
-    useTimeline.js        fetches public entries + profiles for timeline
+    useVibes.ts           CRUD for current user's entries (optimistic)
+    useTimeline.ts        fetches public entries + profiles for timeline
+    useFollows.ts         follow/unfollow state with optimistic updates + error revert
   lib/
-    supabase.js           Supabase client init (throws if env vars missing)
-    vibeColor.js          HSL color encoding from (valence, arousal)
-    wordAnalysis.js       stop-word filtering + top-N word frequency
-    zones.js              ZONE_META, ZONE_ORDER, getZone()
-  App.jsx                 root: auth gate, nav tabs, layout state
+    database.types.ts     Supabase schema types (vibes, profiles, follows)
+    supabase.ts           Supabase client init (plain, non-generic — see §2)
+    vibeColor.ts          HSL color encoding from (valence, arousal)
+    wordAnalysis.ts       stop-word filtering + top-N word frequency
+    zones.ts              ZoneId type, ZONE_META, ZONE_ORDER, getZone()
+  test/
+    setup.ts              vitest + @testing-library/jest-dom setup
+    analysis.test.ts      exportCSV, buildTimeSeries, regressionSlope, slopeArrow
+    undoDelete.test.tsx   MoodTable undo delete behavior (8 scenarios)
+    follows.test.ts       useFollows hook: load, follow, unfollow, error revert
+  types.ts                shared domain types (Vibe, TimelineEntry, PendingVibe)
+  App.tsx                 root: auth gate, nav tabs, layout state
   index.css               all styles (single file, no CSS modules)
-  main.jsx                Vite entry point
+  main.tsx                Vite entry point
+  vite-env.d.ts           /// <reference types="vite/client" />
 
 public/
   manifest.json           PWA manifest
   icon.svg                app icon
 
 index.html                PWA meta tags + Google Fonts link
-vite.config.js            base: '/' (Vercel, not GitHub Pages)
+vite.config.js            base: '/', vitest config (jsdom environment)
+tsconfig.json             strict mode, bundler moduleResolution, react-jsx
 CLAUDE_IDEAS.md           ideas log (implemented + proposed)
 SPEC.md                   this file
 ```
@@ -234,19 +269,12 @@ SPEC.md                   this file
 
 Items are loosely ordered by effort/value. Nothing here is committed — all are open for discussion.
 
-### High priority / near-term
+### Completed
 
-**Friends / following system**  
-Add a `follows` table (`follower_id`, `followee_id`). Add a "friends timeline" tab that filters the global feed to followed users only. The similar vibers ranking is a natural discovery surface for finding people to follow.
-
-**Export (CSV / JSON)**  
-A button in the analysis panel that downloads the current filtered slice. Trivial to implement — just hasn't been done.
-
-**Undo delete**  
-Replace the two-click confirm with a 5-second undo toast before actually committing the DELETE to Supabase. Better UX, same net safety.
-
-**Trend line**  
-Sparkline or simple linear regression in the analysis panel showing whether avg valence/arousal has trended up or down over a configurable window. May require a lightweight charting library (or hand-rolled SVG path).
+- ✓ **Friends / following system** — `follows` table + RLS, `useFollows` hook, follow buttons in similar vibers, following feed filter
+- ✓ **Export CSV** — filter-aware download button in analysis panel
+- ✓ **Undo delete** — 5-second undo toast replacing two-click confirm
+- ✓ **Trend line** — daily avg valence/arousal sparklines + regression overlays in analysis panel
 
 ### Medium effort
 
@@ -262,6 +290,12 @@ The manifest is live but there's no service worker. A cache-first strategy for s
 **Shareable vibe card**  
 Generate an OG-image or mini shareable URL for a single entry — a small mood grid with one dot and the zone label. Requires a serverless function (Vercel Edge Function + Satori or similar).
 
+**JSON export option**  
+The current export is CSV-only; a JSON download would preserve types and be easier to re-import or pass to scripts.
+
+**Username editing**  
+Currently usernames are immutable email prefixes. A simple profile edit form to set a display name would improve the social layer.
+
 ### Longer-term / speculative
 
 **Weekly digest email**  
@@ -273,19 +307,20 @@ An opt-in toggle that shows a blurred heatmap of all users' activity for today. 
 **Custom zone labels**  
 Per-user rename of the seven zone labels, stored in a `zone_labels` column on `profiles`. The existing names are central to the app's personality, so this would probably be a power-user feature.
 
-**Optimistic update rollback**  
-When a Supabase mutation fails, roll back the optimistic local state update in `useVibes`. Currently errors are silent from a UI state perspective.
+**Mutual follows / follow-back indicator**  
+Show a "follows you back" badge next to usernames in similar vibers. Requires a second query or join on the `follows` table.
 
-**Username editing**  
-Currently usernames are immutable email prefixes. A simple profile edit form to set a display name would improve the social layer.
+**Timeline pagination**  
+The timeline currently loads all public entries in one query. Cursor-based pagination needed once entry volume grows.
 
 ---
 
 ## 9. Known Gaps & Gotchas
 
-- **No test suite.** No unit tests, no integration tests, no E2E.
-- **Optimistic updates don't roll back** on error (see §6).
+- **Optimistic updates in `useVibes` don't roll back** on error (see §6). `useFollows` does roll back correctly.
 - **Profile usernames are email prefixes** and currently immutable from the UI.
 - **`labelScale` on mobile** scales all label font sizes by 0.58. If label sizes are adjusted, verify at mobile widths.
-- **The 3-hour lock constant exists in two places**: `MoodTable.jsx` (client) and the Supabase RLS policy (server). They must stay in sync.
+- **The 3-hour lock constant exists in two places**: `MoodTable.tsx` (client) and the Supabase RLS policy (server). They must stay in sync.
 - **No error boundary.** An uncaught render error will crash the whole app.
+- **Timeline loads all public entries at once.** Will not scale past a few hundred rows without pagination.
+- **Similar vibers uses all-time data.** The zone distribution vectors are computed from a user's full public history, not a recent window. Could be noisy for users whose mood patterns have shifted.
