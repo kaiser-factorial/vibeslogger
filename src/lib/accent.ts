@@ -18,7 +18,7 @@ const CREAM = {
   rgb:    '231, 222, 203',
 }
 
-interface Palette {
+export interface Palette {
   accent: string
   hover: string
   ink: string
@@ -46,7 +46,9 @@ function luminance([r, g, b]: [number, number, number]): number {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255
 }
 
-function paletteFor(zone: ZoneId | null): Palette {
+// Exported so the log modal can preview a zone's accent (and the neutral cream
+// default via `paletteFor(null)`) without applying it globally.
+export function paletteFor(zone: ZoneId | null): Palette {
   if (!zone) return { ...CREAM, glow: `rgba(${CREAM.rgb}, 0.45)` }
   const rgb = hexToRgb(ZONE_META[zone].color)
   return {

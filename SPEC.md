@@ -159,6 +159,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
   - "post to timeline" (default: on) → sets `public` column
   - "include note publicly" (shown only when public + note present) → sets `note_public`
 - Enter submits; Escape closes
+- **Theme preview**: the modal previews the accent this click is about to apply (see Dynamic Vibe Accent). The backdrop gets a faint radial wash of the clicked zone's color and the submit ("log it") button is the full zone color, while the modal's own controls stay neutral cream/charcoal. Implemented by setting CSS vars inline on the backdrop: `--accent*` are overridden to the neutral palette (`paletteFor(null)`) and `--preview-*` carry the zone palette, which only `.btn-primary--preview` consumes.
 
 ### Mood Table (`src/components/MoodTable.tsx`)
 - Lists all entries for the logged-in user, newest first

@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import type { CSSProperties } from 'react'
 import type { PendingVibe } from '../types'
+import { getZone } from '../lib/zones'
+import { paletteFor } from '../lib/accent'
 
 interface Props {
   vibe: PendingVibe
@@ -16,6 +19,24 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
 
   const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0
   const showHint  = wordCount > 0 && wordCount < 3
+
+  // Preview the theme this click is about to apply: a faint wash of the zone
+  // color behind the modal and a full-color submit button, while the modal's
+  // own controls stay neutral cream/charcoal (overridden via these vars).
+  const preview = paletteFor(getZone(vibe.x, vibe.y))
+  const neutral = paletteFor(null)
+  const themeStyle = {
+    '--accent':        neutral.accent,
+    '--accent-hover':  neutral.hover,
+    '--accent-ink':    neutral.ink,
+    '--accent-rgb':    neutral.rgb,
+    '--accent-glow':   neutral.glow,
+    '--preview-accent': preview.accent,
+    '--preview-hover':  preview.hover,
+    '--preview-ink':    preview.ink,
+    '--preview-glow':   preview.glow,
+    background: `radial-gradient(circle at 50% 50%, rgba(${preview.rgb}, 0.20) 0%, rgba(${preview.rgb}, 0.05) 45%, transparent 70%), rgba(0, 0, 0, 0.6)`,
+  } as CSSProperties
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -36,7 +57,7 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" style={themeStyle} onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <div className="modal-coords">
           valence {vibe.x.toFixed(1)} · arousal {vibe.y.toFixed(1)}
@@ -75,7 +96,7 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
           )}
         </div>
         <div className="modal-actions">
-          <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
+          <button className="btn-primary btn-primary--preview" onClick={handleSubmit} disabled={saving}>
             {saving ? 'saving...' : 'log it'}
           </button>
           <button className="btn-ghost" onClick={onClose}>cancel</button>
