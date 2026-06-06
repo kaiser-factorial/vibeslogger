@@ -23,6 +23,7 @@ export default function App() {
   const [settingPassword, setSettingPassword] = useState(false)
   const [showLabels,      setShowLabels]      = useState(true)
   const [showEmotions,    setShowEmotions]    = useState(false)
+  const [exploreMode,     setExploreMode]     = useState(false)
 
   const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
   const { followingIds, follow, unfollow } = useFollows(session)
@@ -114,8 +115,10 @@ export default function App() {
                 pendingVibe={pendingVibe}
                 showLabels={showLabels}
                 showEmotions={showEmotions}
+                exploreMode={exploreMode}
                 onToggleLabels={() => setShowLabels(v => !v)}
                 onToggleEmotions={() => setShowEmotions(v => !v)}
+                onToggleExplore={() => setExploreMode(v => !v)}
               />
             </div>
 

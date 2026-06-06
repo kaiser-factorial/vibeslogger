@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from 'react'
-import { vibeColor } from '../lib/vibeColor'
 import type { Vibe, PendingVibe } from '../types'
 
 interface Zone {
@@ -9,6 +8,7 @@ interface Zone {
 
 interface Label {
   text: string; cx: string; cy: string; sz: number; fw: number
+  rotate?: number; align?: 'left' | 'center'; color?: string
 }
 
 interface Emotion {
@@ -21,8 +21,10 @@ interface Props {
   pendingVibe: PendingVibe | null
   showLabels: boolean
   showEmotions: boolean
+  exploreMode: boolean
   onToggleLabels: () => void
   onToggleEmotions: () => void
+  onToggleExplore: () => void
 }
 
 // ── Zone rectangles (x1/y1 = top-left %, x2/y2 = bottom-right %) ─────────────
@@ -40,15 +42,17 @@ const ZONES: Zone[] = [
   { x1:  0, y1: 87, x2: 15, y2:100, bg: '#5050A8', z: 4 },
 ]
 
-// Zone labels — cx/cy = center of zone, text centered via translate(-50%,-50%)
+// Zone labels — cx/cy = anchor of zone. Layout matches the reference mockup:
+// big bold blocks, a diagonal "we are so fucking back", a rotated "what it is".
 const LABELS: Label[] = [
-  { text: 'fuck it\nwe ball',         cx: '21%', cy: '22%', sz: 28,  fw: 900 },
-  { text: 'we are so\nfucking back',  cx: '64%', cy: '33%', sz: 22,  fw: 900 },
-  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 9.5, fw: 700 },
-  { text: 'it is\nwhat it is',        cx: '25%', cy: '52%', sz: 19,  fw: 700 },
-  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 26,  fw: 900 },
-  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 26,  fw: 900 },
-  { text: 'log off\nforever',         cx: '7%',  cy: '93%', sz: 9,   fw: 500 },
+  { text: 'fuck it\nwe ball',         cx: '21%', cy: '21%', sz: 40, fw: 900, align: 'center' },
+  { text: 'we are so\nfucking back',  cx: '66%', cy: '30%', sz: 34, fw: 900, align: 'center', rotate: 34 },
+  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 11, fw: 700, align: 'center' },
+  { text: 'it is',                    cx: '30%', cy: '52%', sz: 30, fw: 900, align: 'center' },
+  { text: 'what\nit is',              cx: '49%', cy: '56%', sz: 30, fw: 900, align: 'center', rotate: -68 },
+  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 36, fw: 900, align: 'center' },
+  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 36, fw: 900, align: 'center' },
+  { text: 'log off\nforever',         cx: '7.5%', cy: '93%', sz: 10, fw: 700, align: 'center' },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
@@ -83,6 +87,55 @@ function fromRel(rx: number, ry: number) {
   }
 }
 
+/** Daytime = logged between 06:00 and 17:59 local time. */
+function isDaytime(createdAt: string): boolean {
+  const h = new Date(createdAt).getHours()
+  return h >= 6 && h < 18
+}
+
+function fmtStamp(ts: string): string {
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} · ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
+}
+
+// ── Sun / moon glyphs — translucent white, neutral on every zone color ──────
+function SunGlyph({ size }: { size: number }) {
+  const r = size / 2
+  const rays = Array.from({ length: 8 }, (_, i) => {
+    const a = (i * Math.PI) / 4
+    const x1 = r + Math.cos(a) * (r * 0.62)
+    const y1 = r + Math.sin(a) * (r * 0.62)
+    const x2 = r + Math.cos(a) * (r * 0.95)
+    const y2 = r + Math.sin(a) * (r * 0.95)
+    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />
+  })
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+      style={{ display: 'block' }}
+      stroke="rgba(255,255,255,0.92)" strokeWidth={1.4} strokeLinecap="round">
+      <circle cx={r} cy={r} r={r * 0.42} fill="rgba(255,255,255,0.5)" stroke="rgba(255,255,255,0.92)" strokeWidth={1.4} />
+      {rays}
+    </svg>
+  )
+}
+
+function MoonGlyph({ size }: { size: number }) {
+  const r = size / 2
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
+      <path
+        d={`M ${r * 1.18} ${r * 0.32}
+            A ${r * 0.82} ${r * 0.82} 0 1 0 ${r * 1.18} ${r * 1.68}
+            A ${r * 0.64} ${r * 0.64} 0 1 1 ${r * 1.18} ${r * 0.32} Z`}
+        fill="rgba(255,255,255,0.5)"
+        stroke="rgba(255,255,255,0.92)"
+        strokeWidth={1.2}
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function useIsMobile(breakpoint = 768): boolean {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint)
   useEffect(() => {
@@ -95,14 +148,16 @@ function useIsMobile(breakpoint = 768): boolean {
 
 export default function MoodGrid({
   vibes, onGridClick, pendingVibe,
-  showLabels, showEmotions,
-  onToggleLabels, onToggleEmotions,
+  showLabels, showEmotions, exploreMode,
+  onToggleLabels, onToggleEmotions, onToggleExplore,
 }: Props) {
   const gridRef    = useRef<HTMLDivElement>(null)
   const isMobile   = useIsMobile()
-  const labelScale = isMobile ? 0.58 : 1
+  const labelScale = isMobile ? 0.5 : 1
+  const dotSize    = isMobile ? 16 : 20
 
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (exploreMode) return // in explore mode the grid is read-only
     if (!gridRef.current) return
     const rect = gridRef.current.getBoundingClientRect()
     const rx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
@@ -114,12 +169,39 @@ export default function MoodGrid({
   return (
     <div className="grid-outer">
       <div className="y-axis">
-        <span>High Energy ↑</span>
-        <span>Low Energy ↓</span>
+        <span>↓ low energy &nbsp;·&nbsp; high energy ↑</span>
       </div>
 
       <div className="grid-col">
-        <div ref={gridRef} className="grid-area" onClick={handleClick}>
+        {/* Header strip: toggles sit top-right, before the notes column */}
+        <div className="grid-header">
+          <div className="grid-toggles">
+            <button
+              className={`grid-toggle ${showLabels ? 'grid-toggle--on' : ''}`}
+              onClick={onToggleLabels}
+            >
+              labels
+            </button>
+            <button
+              className={`grid-toggle ${showEmotions ? 'grid-toggle--on' : ''}`}
+              onClick={onToggleEmotions}
+            >
+              emotion wheel
+            </button>
+            <button
+              className={`grid-toggle ${exploreMode ? 'grid-toggle--on' : ''}`}
+              onClick={onToggleExplore}
+            >
+              explore
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={gridRef}
+          className={`grid-area ${exploreMode ? 'grid-area--explore' : ''}`}
+          onClick={handleClick}
+        >
 
           {/* Background zones — clean rectangles using left/top/right/bottom */}
           {ZONES.map((z, i) => (
@@ -140,15 +222,16 @@ export default function MoodGrid({
             <div key={i} style={{
               position: 'absolute',
               left: l.cx, top: l.cy,
-              transform: 'translate(-50%, -50%)',
+              transform: `translate(-50%, -50%)${l.rotate ? ` rotate(${l.rotate}deg)` : ''}`,
               fontSize: l.sz * labelScale,
               fontWeight: l.fw,
-              color: '#111',
-              lineHeight: 1.15,
+              color: l.color ?? '#141414',
+              lineHeight: 1.02,
               whiteSpace: 'pre-line',
-              textAlign: 'center',
+              textAlign: l.align ?? 'center',
+              letterSpacing: '-0.01em',
               zIndex: 6, pointerEvents: 'none',
-              fontFamily: "'Impact', 'Franklin Gothic Heavy', sans-serif",
+              fontFamily: "'Impact', 'Franklin Gothic Heavy', 'Arial Narrow Bold', sans-serif",
             }}>
               {l.text}
             </div>
@@ -178,50 +261,53 @@ export default function MoodGrid({
             )
           })}
 
-          {/* Plotted vibes */}
-          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 10, pointerEvents: 'none' }}>
-            {vibes.map(v => {
-              const { rx, ry } = toRel(v.valence, v.arousal)
-              return (
-                <circle key={v.id}
-                  cx={`${rx * 100}%`} cy={`${ry * 100}%`}
-                  r={isMobile ? 5 : 6}
-                  fill={vibeColor(v.valence, v.arousal)}
-                  stroke="rgba(0,0,0,0.35)" strokeWidth={1}
-                />
-              )
-            })}
+          {/* Plotted vibes — sun (day) / moon (night) glyphs */}
+          {vibes.map(v => {
+            const { rx, ry } = toRel(v.valence, v.arousal)
+            const day = isDaytime(v.created_at)
+            const flip = rx > 0.62
+            return (
+              <div
+                key={v.id}
+                className={`vibe-point ${exploreMode ? 'vibe-point--explore' : ''}`}
+                style={{
+                  left: `${rx * 100}%`,
+                  top:  `${ry * 100}%`,
+                  width: dotSize, height: dotSize,
+                }}
+                aria-label={day ? 'logged during the day' : 'logged at night'}
+              >
+                {day ? <SunGlyph size={dotSize} /> : <MoonGlyph size={dotSize} />}
 
-            {pendingVibe && (() => {
-              const { rx, ry } = toRel(pendingVibe.x, pendingVibe.y)
-              return (
-                <circle
-                  cx={`${rx * 100}%`} cy={`${ry * 100}%`}
-                  r={7} fill="rgba(255,210,0,0.9)"
-                  stroke="#fff" strokeWidth={1.5} strokeDasharray="3,2"
-                />
-              )
-            })()}
-          </svg>
+                {exploreMode && (
+                  <div className={`vibe-tip ${flip ? 'vibe-tip--left' : ''}`}>
+                    <div className="vibe-tip-head">
+                      <span className="vibe-tip-glyph">{day ? '☀' : '☾'}</span>
+                      <span className="vibe-tip-coord">({v.valence}, {v.arousal})</span>
+                    </div>
+                    {v.note && <div className="vibe-tip-note">{v.note}</div>}
+                    <div className="vibe-tip-stamp">{fmtStamp(v.created_at)}</div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {/* Pending (unsaved) vibe */}
+          {pendingVibe && (() => {
+            const { rx, ry } = toRel(pendingVibe.x, pendingVibe.y)
+            return (
+              <div
+                className="vibe-pending"
+                style={{ left: `${rx * 100}%`, top: `${ry * 100}%` }}
+              />
+            )
+          })()}
         </div>
 
-        {/* Overlay toggles */}
-        <div className="grid-controls">
-          <button
-            className={`grid-toggle ${showLabels ? 'grid-toggle--on' : ''}`}
-            onClick={onToggleLabels}
-          >
-            labels
-          </button>
-          <button
-            className={`grid-toggle ${showEmotions ? 'grid-toggle--on' : ''}`}
-            onClick={onToggleEmotions}
-          >
-            emotion wheel
-          </button>
+        <div className="x-axis">
+          <span>← unpleasant &nbsp;·&nbsp; pleasant →</span>
         </div>
-
-        <div className="x-axis">← Unpleasant to Pleasant →</div>
       </div>
     </div>
   )

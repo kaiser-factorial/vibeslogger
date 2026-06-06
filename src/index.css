@@ -2,17 +2,40 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:       #0a0a0a;
-  --surface:  #111122;
-  --border:   #1e1e1e;
-  --text:     #e0e0e0;
-  --muted:    #555;
-  --accent:   #7b1fa2;
-  --danger:   #c62828;
+  --bg:          #0a0a0a;
+  --surface:     #111122;
+  --border:      #232323;
+  --text:        #e8e8e8;
+  --muted:       #6a6a6a;
+  --axis:        #8a8a8a;
+  --accent:      #e5392b;
+  --accent-hover:#f24a3c;
+  --accent-soft: rgba(229, 57, 43, 0.10);
+  --accent-ink:  #ffffff;
+  --danger:      #c62828;
   font-family: 'IBM Plex Mono', 'Courier New', monospace;
 }
 
-body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+/* Subtle tiled vibe-color background — echoes the mood-square palette.
+   Kept very low opacity and fixed behind everything so text stays readable. */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  background-image:
+    linear-gradient(135deg,
+      rgba(165,40,40,0.05)   0 25%,
+      rgba(94,110,32,0.05)   25% 50%,
+      rgba(208,128,32,0.05)  50% 75%,
+      rgba(94,152,112,0.05)  75% 100%),
+    linear-gradient(45deg,
+      rgba(127,181,204,0.04) 0 33%,
+      rgba(212,204,32,0.04)  33% 66%,
+      rgba(80,80,168,0.04)   66% 100%);
+  background-size: 220px 220px, 300px 300px;
+  background-attachment: fixed;
+}
 
 /* ── Layout ── */
 .app { display: flex; flex-direction: column; height: 100vh; }
@@ -50,48 +73,110 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
 /* ── Grid panel ── */
 .grid-outer {
   display: flex; height: 100%;
-  padding: 14px 10px 10px 10px; gap: 6px;
+  padding: 12px 12px 10px 8px; gap: 8px;
 }
 
+/* Y axis — vertical, centered, symmetric with the x axis below the grid */
 .y-axis {
-  display: flex; flex-direction: column; justify-content: space-between;
-  align-items: center; font-size: 9px; color: var(--muted);
-  padding-bottom: 20px; user-select: none;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--axis); user-select: none;
+  letter-spacing: 0.08em; text-transform: lowercase;
+  /* offset to vertically center against the grid area, ignoring header + x-axis */
+  padding: 34px 0 22px;
 }
 .y-axis span { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
 
 .grid-col { flex: 1; display: flex; flex-direction: column; }
+
+/* Header strip above the grid — holds the toggle pills, aligned right */
+.grid-header {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 0 8px;
+  min-height: 26px;
+}
+.grid-toggles { display: flex; gap: 6px; }
 
 .grid-area {
   flex: 1; position: relative; cursor: crosshair;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   user-select: none; overflow: hidden;
+  border-radius: 4px;
 }
+.grid-area--explore { cursor: default; }
+/* Dim/desaturate zones slightly in explore mode so it reads as "browsing" */
+.grid-area--explore > div[style] { filter: saturate(0.62) brightness(0.82); transition: filter 0.25s ease; }
 
 .x-axis {
-  text-align: center; padding-top: 5px;
-  font-size: 9px; color: var(--muted); user-select: none;
+  display: flex; align-items: center; justify-content: center;
+  padding-top: 8px;
+  font-size: 10px; color: var(--axis); user-select: none;
+  letter-spacing: 0.08em; text-transform: lowercase;
 }
 
-/* ── Grid overlay toggles ── */
-.grid-controls {
-  display: flex; gap: 6px; justify-content: flex-end;
-  padding: 5px 0 2px;
-}
+/* ── Toggle pills ── */
 .grid-toggle {
-  background: none; border: 1px solid #252525;
-  color: #383838; cursor: pointer; font-family: inherit;
-  font-size: 9px; letter-spacing: 0.06em; font-weight: 700;
-  padding: 3px 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+  color: var(--muted); cursor: pointer; font-family: inherit;
+  font-size: 10px; letter-spacing: 0.06em; font-weight: 700;
+  padding: 5px 11px; border-radius: 999px;
   transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
 }
-.grid-toggle:hover { border-color: #3a3a3a; color: var(--muted); }
+.grid-toggle:hover { border-color: var(--accent); color: var(--text); }
 .grid-toggle:active { transform: scale(0.93); }
 .grid-toggle--on {
   border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(123, 31, 162, 0.08);
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+
+/* ── Plotted vibe points (sun / moon glyphs) ── */
+.vibe-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.55));
+  pointer-events: none;
+}
+.vibe-point--explore { pointer-events: auto; cursor: pointer; }
+.vibe-point--explore:hover { z-index: 30; }
+.vibe-point--explore:hover svg { transform: scale(1.18); transition: transform 0.12s ease; }
+
+/* Hover info card (explore mode) */
+.vibe-tip {
+  position: absolute;
+  left: calc(100% + 10px); top: 50%;
+  transform: translateY(-50%);
+  width: 190px;
+  background: rgba(10,10,16,0.96);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.12s ease;
+  z-index: 40;
+  text-align: left;
+}
+.vibe-tip--left { left: auto; right: calc(100% + 10px); }
+.vibe-point--explore:hover .vibe-tip { opacity: 1; visibility: visible; }
+.vibe-tip-head { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.vibe-tip-glyph { font-size: 13px; line-height: 1; }
+.vibe-tip-coord { font-size: 12px; font-weight: 700; color: var(--text); }
+.vibe-tip-note {
+  font-size: 12px; color: var(--text); line-height: 1.45;
+  margin-bottom: 5px; white-space: pre-wrap; word-break: break-word;
+}
+.vibe-tip-stamp { font-size: 10px; color: var(--muted); letter-spacing: 0.03em; }
+
+/* Pending (unsaved) vibe marker */
+.vibe-pending {
+  position: absolute;
+  width: 16px; height: 16px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: rgba(255,210,0,0.16);
+  border: 1.5px dashed #fff;
+  z-index: 11; pointer-events: none;
 }
 
 /* ── Table panel ── */
@@ -144,7 +229,7 @@ body { background: var(--bg); color: var(--text); height: 100vh; overflow: hidde
   font-weight: 700; letter-spacing: 0.04em;
   transition: background 0.15s, transform 0.1s;
 }
-.btn-save:hover:not(:disabled)  { background: #9c27b0; }
+  .btn-save:hover:not(:disabled)  { background: var(--accent-hover); }
 .btn-save:active:not(:disabled) { transform: scale(0.94); }
 .btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -240,7 +325,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-family: inherit;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.btn-primary:hover:not(:disabled) { background: #9c27b0; box-shadow: 0 0 12px rgba(123,31,162,0.4); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px rgba(229,57,43,0.4); }
 .btn-primary:active:not(:disabled) { transform: scale(0.96); box-shadow: none; }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -251,7 +336,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-family: inherit;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
-.auth-form button:hover:not(:disabled) { background: #9c27b0; box-shadow: 0 0 12px rgba(123,31,162,0.4); }
+.auth-form button:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 0 12px rgba(229,57,43,0.4); }
 .auth-form button:active:not(:disabled) { transform: scale(0.97); box-shadow: none; }
 .auth-form button:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -536,7 +621,7 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 3px 10px; border-radius: 10px;
   transition: background 0.12s, transform 0.1s;
 }
-.undo-toast-btn:hover  { background: rgba(123,31,162,0.15); }
+.undo-toast-btn:hover  { background: var(--accent-soft); }
 .undo-toast-btn:active { transform: scale(0.94); }
 
 /* ── Trend line / sparkline ── */
@@ -586,8 +671,8 @@ button { -webkit-tap-highlight-color: transparent; }
   transition: background 0.12s;
 }
 .tl-entry:hover { background: #0d0d18; }
-.tl-entry--own { background: rgba(123,31,162,0.04); }
-.tl-entry--own:hover { background: rgba(123,31,162,0.09); }
+.tl-entry--own { background: rgba(229,57,43,0.04); }
+.tl-entry--own:hover { background: rgba(229,57,43,0.09); }
 
 .tl-dot {
   flex-shrink: 0;
@@ -622,7 +707,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .timeline-filter-btn:hover { color: var(--text); background: #111; }
 .timeline-filter-btn:active { transform: scale(0.95); }
 .timeline-filter-btn--active {
-  background: rgba(123,31,162,0.1);
+  background: var(--accent-soft);
   border-color: var(--accent); color: var(--accent);
 }
 
@@ -634,7 +719,7 @@ button { -webkit-tap-highlight-color: transparent; }
   padding: 2px 8px; border-radius: 8px; white-space: nowrap;
   transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.1s;
 }
-.follow-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(123,31,162,0.08); }
+.follow-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .follow-btn:active { transform: scale(0.93); }
 .follow-btn--following {
   border-color: #2a2a3a; color: var(--muted);
@@ -680,6 +765,14 @@ button { -webkit-tap-highlight-color: transparent; }
     width: min(320px, 90vw);
   }
   .app-title { font-size: 18px; }
+
+  /* Grid header toggles wrap and shrink on small screens */
+  .grid-header { min-height: auto; padding-bottom: 6px; }
+  .grid-toggles { flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+  .grid-toggle { font-size: 9px; padding: 4px 8px; }
+  .y-axis, .x-axis { font-size: 8px; }
+  .y-axis { padding: 30px 0 18px; }
+  .vibe-tip { width: 150px; }
 
   .analysis-wrap { padding: 16px 14px 48px; }
   .heatmap-wrap  { max-width: 100%; }
