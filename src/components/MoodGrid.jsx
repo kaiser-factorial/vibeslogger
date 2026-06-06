@@ -16,16 +16,15 @@ const ZONES = [
   { x1:  0, y1: 87, x2: 15, y2:100, bg: '#5050A8', z: 4 },   // purple corner — log off forever
 ]
 
-// Zone labels
+// Zone labels — cx/cy = center of zone, text centered via translate(-50%,-50%)
 const LABELS = [
-  { text: 'Fuck it\nwe ball',         x: '5%',   y: '5%',    sz: 26, fw: 900 },
-  { text: 'We are so\nfucking back',  x: '46%',  y: '3%',    sz: 22, fw: 900, rot: -11, ital: true },
-  { text: 'LETS FUCKING\nGOOOOOOOO', x: '79%',  y: '1.5%',  sz: 9,  fw: 700, c: '#111' },
-  { text: 'It is',                    x: '5%',   y: '45%',   sz: 20, fw: 700 },
-  { text: 'what\nit is',              x: '27%',  y: '44%',   sz: 20, fw: 700, rot: -9, ital: true },
-  { text: "It's so\nover",            x: '4%',   y: '64%',   sz: 24, fw: 900 },
-  { text: 'We\nvibing',               x: '60%',  y: '64%',   sz: 28, fw: 900 },
-  { text: 'log off\nforever',         x: '0.5%', y: '87.5%', sz: 8,  fw: 500 },
+  { text: 'fuck it\nwe ball',         cx: '21%', cy: '22%', sz: 22,  fw: 900 },
+  { text: 'we are so\nfucking back',  cx: '64%', cy: '33%', sz: 17,  fw: 900 },
+  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 7.5, fw: 700 },
+  { text: 'it is\nwhat it is',        cx: '25%', cy: '52%', sz: 15,  fw: 700 },
+  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 20,  fw: 900 },
+  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 20,  fw: 900 },
+  { text: 'log off\nforever',         cx: '7%',  cy: '93%', sz: 7,   fw: 500 },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
@@ -115,13 +114,15 @@ export default function MoodGrid({
           {/* Zone labels (toggleable) */}
           {showLabels && LABELS.map((l, i) => (
             <div key={i} style={{
-              position: 'absolute', left: l.x, top: l.y,
+              position: 'absolute',
+              left: l.cx, top: l.cy,
+              transform: 'translate(-50%, -50%)',
               fontSize: l.sz * labelScale,
               fontWeight: l.fw,
-              color: l.c || '#fff',
-              transform: l.rot ? `rotate(${l.rot}deg)` : undefined,
-              fontStyle: l.ital ? 'italic' : undefined,
-              lineHeight: 1.1, whiteSpace: 'pre-line',
+              color: '#111',
+              lineHeight: 1.15,
+              whiteSpace: 'pre-line',
+              textAlign: 'center',
               zIndex: 6, pointerEvents: 'none',
               fontFamily: "'Impact', 'Franklin Gothic Heavy', sans-serif",
             }}>
