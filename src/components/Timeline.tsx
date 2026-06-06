@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import useTimeline from '../hooks/useTimeline'
 import { getZone, ZONE_META, ZONE_ORDER } from '../lib/zones'
@@ -7,7 +8,12 @@ import type { TimelineEntry } from '../types'
 
 interface Props {
   session: Session
+  followingIds: Set<string>
+  follow: (userId: string) => Promise<void>
+  unfollow: (userId: string) => Promise<void>
 }
+
+type FeedFilter = 'everyone' | 'following'
 
 function timeAgo(ts: string): string {
   const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000)
@@ -21,6 +27,9 @@ function timeAgo(ts: string): string {
 interface SimilarVibersProps {
   entries: TimelineEntry[]
   currentUserId: string
+  followingIds: Set<string>
+  follow: (userId: string) => Promise<void>
+  unfollow: (userId: string) => Promise<void>
 }
 
 interface UserData {
@@ -29,7 +38,7 @@ interface UserData {
   username: string
 }
 
-function SimilarVibers({ entries, currentUserId }: SimilarVibersProps) {
+function SimilarVibers({ entries, currentUserId, followingIds, follow, unfollow }: SimilarVibersProps) {
   const byUser: Record<string, UserData> = {}
   entries.forEach(e => {
     if (!byUser[e.user_id]) byUser[e.user_id] = { counts: {}, total: 0, username: e.username }
@@ -43,7 +52,7 @@ function SimilarVibers({ entries, currentUserId }: SimilarVibersProps) {
   if (!myData || myData.total < 5) return null
 
   const myVec = toVec(myData)
-  const SQRT2 = Math.sqrt(2)
+  const SQRT2  = Math.sqrt(2)
 
   const matches = Object.entries(byUser)
     .filter(([uid, d]) => uid !== currentUserId && d.total >= 3)
@@ -62,37 +71,81 @@ function SimilarVibers({ entries, currentUserId }: SimilarVibersProps) {
       <div className="timeline-section-title">similar vibers</div>
       <div className="similar-sub">based on zone distribution across all public entries</div>
       <div className="similar-list">
-        {matches.map(m => (
-          <div key={m.uid} className="similar-row">
-            <span className="similar-name">@{m.username}</span>
-            <div className="similar-bar-track">
-              <div className="similar-bar-fill" style={{ width: `${m.pct}%` }} />
+        {matches.map(m => {
+          const isFollowing = followingIds.has(m.uid)
+          return (
+            <div key={m.uid} className="similar-row">
+              <span className="similar-name">@{m.username}</span>
+              <div className="similar-bar-track">
+                <div className="similar-bar-fill" style={{ width: `${m.pct}%` }} />
+              </div>
+              <span className="similar-pct">{m.pct}%</span>
+              <button
+                className={`follow-btn ${isFollowing ? 'follow-btn--following' : ''}`}
+                onClick={() => isFollowing ? unfollow(m.uid) : follow(m.uid)}
+              >
+                {isFollowing ? 'following' : 'follow'}
+              </button>
             </div>
-            <span className="similar-pct">{m.pct}%</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
 
-export default function Timeline({ session }: Props) {
+export default function Timeline({ session, followingIds, follow, unfollow }: Props) {
   const { entries, loading } = useTimeline(session)
+  const [filter, setFilter] = useState<FeedFilter>('everyone')
 
   if (loading) return <div className="loading">loading timeline...</div>
 
+  const visibleEntries = filter === 'following'
+    ? entries.filter(e => e.user_id === session.user.id || followingIds.has(e.user_id))
+    : entries
+
   return (
     <div className="timeline-wrap">
-      <SimilarVibers entries={entries} currentUserId={session.user.id} />
+      <SimilarVibers
+        entries={entries}
+        currentUserId={session.user.id}
+        followingIds={followingIds}
+        follow={follow}
+        unfollow={unfollow}
+      />
 
-      <div className="timeline-section-title">global timeline</div>
-      <div className="timeline-sub">public vibes from everyone</div>
+      <div className="timeline-header-row">
+        <div className="timeline-section-title" style={{ margin: 0 }}>timeline</div>
+        <div className="timeline-filter">
+          <button
+            className={`timeline-filter-btn ${filter === 'everyone' ? 'timeline-filter-btn--active' : ''}`}
+            onClick={() => setFilter('everyone')}
+          >
+            everyone
+          </button>
+          <button
+            className={`timeline-filter-btn ${filter === 'following' ? 'timeline-filter-btn--active' : ''}`}
+            onClick={() => setFilter('following')}
+          >
+            following{followingIds.size > 0 ? ` (${followingIds.size})` : ''}
+          </button>
+        </div>
+      </div>
+      <div className="timeline-sub">
+        {filter === 'following'
+          ? followingIds.size === 0
+            ? 'follow someone from the similar vibers list to see their posts here'
+            : 'posts from people you follow + your own'
+          : 'public vibes from everyone'}
+      </div>
 
-      {entries.length === 0 ? (
-        <div className="timeline-empty">no public vibes yet — be the first</div>
+      {visibleEntries.length === 0 ? (
+        <div className="timeline-empty">
+          {filter === 'following' ? 'nothing here yet' : 'no public vibes yet — be the first'}
+        </div>
       ) : (
         <div className="timeline-feed">
-          {entries.map(e => {
+          {visibleEntries.map(e => {
             const zone = getZone(e.valence, e.arousal)
             const meta = ZONE_META[zone]
             const isOwn = e.user_id === session.user.id
@@ -101,12 +154,8 @@ export default function Timeline({ session }: Props) {
                 <span className="tl-dot" style={{ background: vibeColor(e.valence, e.arousal) }} />
                 <div className="tl-body">
                   <div className="tl-top">
-                    <span className="tl-zone" style={{ color: meta.color }}>
-                      {meta.label}
-                    </span>
-                    <span className="tl-meta">
-                      @{e.username} · {timeAgo(e.created_at)}
-                    </span>
+                    <span className="tl-zone" style={{ color: meta.color }}>{meta.label}</span>
+                    <span className="tl-meta">@{e.username} · {timeAgo(e.created_at)}</span>
                   </div>
                   {e.note_public && e.note && (
                     <div className="tl-note">{e.note}</div>

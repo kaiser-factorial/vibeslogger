@@ -34,6 +34,70 @@ function buildHeatmap(vibes: Vibe[]): number[][] {
   return grid
 }
 
+interface DailyPoint {
+  date: string
+  avgValence: number
+  avgArousal: number
+}
+
+function buildTimeSeries(vibes: Vibe[]): DailyPoint[] {
+  const byDay: Record<string, { valences: number[]; arousals: number[] }> = {}
+  for (const v of vibes) {
+    const day = v.created_at.split('T')[0]
+    if (!byDay[day]) byDay[day] = { valences: [], arousals: [] }
+    byDay[day].valences.push(v.valence)
+    byDay[day].arousals.push(v.arousal)
+  }
+  return Object.entries(byDay)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, { valences, arousals }]) => ({
+      date,
+      avgValence: avg(valences),
+      avgArousal: avg(arousals),
+    }))
+}
+
+// Linear regression slope — positive = trending up, negative = down
+function regressionSlope(values: number[]): number {
+  const n = values.length
+  if (n < 2) return 0
+  const xMean = (n - 1) / 2
+  const yMean = avg(values)
+  const num = values.reduce((s, y, i) => s + (i - xMean) * (y - yMean), 0)
+  const den = values.reduce((s, _, i) => s + (i - xMean) ** 2, 0)
+  return den === 0 ? 0 : num / den
+}
+
+function slopeArrow(slope: number): string {
+  if (slope > 0.08) return '↑'
+  if (slope < -0.08) return '↓'
+  return '→'
+}
+
+function exportCSV(vibes: Vibe[]) {
+  const headers = ['date', 'time', 'valence', 'arousal', 'zone', 'note']
+  const rows = vibes.map(v => {
+    const d = new Date(v.created_at)
+    const note = v.note ? `"${v.note.replace(/"/g, '""')}"` : ''
+    return [
+      `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`,
+      d.toLocaleTimeString(),
+      v.valence,
+      v.arousal,
+      getZone(v.valence, v.arousal),
+      note,
+    ].join(',')
+  })
+  const csv = [headers.join(','), ...rows].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href     = url
+  a.download = `vibeslogger-${new Date().toISOString().split('T')[0]}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function StatsStrip({ vibes }: { vibes: Vibe[] }) {
@@ -63,6 +127,91 @@ function StatsStrip({ vibes }: { vibes: Vibe[] }) {
   )
 }
 
+function TrendLine({ vibes }: { vibes: Vibe[] }) {
+  const series = useMemo(() => buildTimeSeries(vibes), [vibes])
+  if (series.length < 2) return null
+
+  const W = 300, H = 70, PAD_X = 4, PAD_Y = 8
+
+  function toSvgPoint(index: number, value: number) {
+    const n = series.length
+    const x = PAD_X + ((index / (n - 1)) * (W - 2 * PAD_X))
+    const y = PAD_Y + ((1 - (value - 1) / 9) * (H - 2 * PAD_Y))
+    return { x, y }
+  }
+
+  function toPath(pts: { x: number; y: number }[]): string {
+    return pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')
+  }
+
+  const vPts = series.map((d, i) => toSvgPoint(i, d.avgValence))
+  const aPts = series.map((d, i) => toSvgPoint(i, d.avgArousal))
+
+  const vSlope = regressionSlope(series.map(d => d.avgValence))
+  const aSlope = regressionSlope(series.map(d => d.avgArousal))
+
+  // Regression lines
+  function regressionPath(values: number[]): string {
+    const sl = regressionSlope(values)
+    const me = avg(values)
+    const n  = values.length
+    const x0 = PAD_X
+    const x1 = W - PAD_X
+    const mid = (n - 1) / 2
+    const y0 = PAD_Y + ((1 - (me + sl * (0 - mid) - 1) / 9) * (H - 2 * PAD_Y))
+    const y1 = PAD_Y + ((1 - (me + sl * (n - 1 - mid) - 1) / 9) * (H - 2 * PAD_Y))
+    return `M ${x0.toFixed(1)} ${y0.toFixed(1)} L ${x1.toFixed(1)} ${y1.toFixed(1)}`
+  }
+
+  return (
+    <div className="analysis-section">
+      <div className="analysis-section-title">trends</div>
+      <div className="analysis-section-sub">daily average valence and arousal</div>
+      <div className="trend-indicators">
+        <span className="trend-badge" style={{ color: '#4896A8' }}>
+          valence {slopeArrow(vSlope)}
+        </span>
+        <span className="trend-badge" style={{ color: '#D08020' }}>
+          arousal {slopeArrow(aSlope)}
+        </span>
+        <span className="trend-days">{series.length} days</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="trend-svg"
+        aria-label="valence and arousal trends"
+      >
+        {/* Grid lines at 1, 5, 10 */}
+        {[1, 5, 10].map(v => {
+          const y = PAD_Y + ((1 - (v - 1) / 9) * (H - 2 * PAD_Y))
+          return (
+            <line key={v} x1={PAD_X} y1={y} x2={W - PAD_X} y2={y}
+              stroke="#1a1a1a" strokeWidth="0.5" />
+          )
+        })}
+        {/* Regression lines (dashed) */}
+        <path d={regressionPath(series.map(d => d.avgValence))}
+          fill="none" stroke="#4896A8" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
+        <path d={regressionPath(series.map(d => d.avgArousal))}
+          fill="none" stroke="#D08020" strokeWidth="0.75" strokeDasharray="3,2" opacity={0.5} />
+        {/* Sparklines */}
+        <path d={toPath(vPts)} fill="none" stroke="#4896A8" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round" />
+        <path d={toPath(aPts)} fill="none" stroke="#D08020" strokeWidth="1.8"
+          strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots */}
+        {vPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#4896A8" />)}
+        {aPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2.5" fill="#D08020" />)}
+      </svg>
+      <div className="trend-legend">
+        <span style={{ color: '#4896A8' }}>— valence</span>
+        <span style={{ color: '#D08020' }}>— arousal</span>
+        <span className="trend-legend-note">dashed = regression</span>
+      </div>
+    </div>
+  )
+}
+
 function Heatmap({ vibes }: { vibes: Vibe[] }) {
   const grid   = useMemo(() => buildHeatmap(vibes), [vibes])
   const maxVal = useMemo(() => Math.max(1, ...grid.flat()), [grid])
@@ -83,9 +232,7 @@ function Heatmap({ vibes }: { vibes: Vibe[] }) {
               const displayCol    = i % 10
               const arousalBucket = 9 - displayRow
               const count   = grid[arousalBucket][displayCol]
-              const opacity = count === 0
-                ? 0
-                : 0.12 + (count / maxVal) * 0.88
+              const opacity = count === 0 ? 0 : 0.12 + (count / maxVal) * 0.88
               return (
                 <div
                   key={i}
@@ -137,10 +284,7 @@ function ZoneBreakdown({ vibes }: { vibes: Vibe[] }) {
             <div key={zoneId} className="zone-bar-row">
               <div className="zone-bar-label">{label}</div>
               <div className="zone-bar-track">
-                <div
-                  className="zone-bar-fill"
-                  style={{ width: `${pct}%`, background: color }}
-                />
+                <div className="zone-bar-fill" style={{ width: `${pct}%`, background: color }} />
               </div>
               <div className="zone-bar-pct">{pct}%</div>
             </div>
@@ -187,11 +331,7 @@ function WordAnalysis({ vibes }: { vibes: Vibe[] }) {
         {populated.map(zoneId => {
           const { label, color } = ZONE_META[zoneId]
           return (
-            <div
-              key={zoneId}
-              className="word-zone-card"
-              style={{ borderColor: color + '55' }}
-            >
+            <div key={zoneId} className="word-zone-card" style={{ borderColor: color + '55' }}>
               <div className="word-zone-name" style={{ color }}>{label}</div>
               <div className="word-chips">
                 {byZone[zoneId]!.map(({ word, count }) => (
@@ -241,27 +381,25 @@ export default function Analysis({ vibes }: { vibes: Vibe[] }) {
     <div className="analysis-wrap">
       <div className="analysis-filter">
         <label className="filter-label">from</label>
-        <input
-          type="date"
-          className="filter-input"
-          value={from}
-          onChange={e => setFrom(e.target.value)}
-        />
+        <input type="date" className="filter-input" value={from}
+          onChange={e => setFrom(e.target.value)} />
         <label className="filter-label">to</label>
-        <input
-          type="date"
-          className="filter-input"
-          value={to}
-          onChange={e => setTo(e.target.value)}
-        />
+        <input type="date" className="filter-input" value={to}
+          onChange={e => setTo(e.target.value)} />
         {hasFilter && (
-          <button
-            className="btn-ghost filter-clear"
-            onClick={() => { setFrom(''); setTo('') }}
-          >
+          <button className="btn-ghost filter-clear"
+            onClick={() => { setFrom(''); setTo('') }}>
             clear
           </button>
         )}
+        <button
+          className="btn-ghost filter-export"
+          onClick={() => exportCSV(filtered)}
+          title={`export ${filtered.length} entries as CSV`}
+          disabled={filtered.length === 0}
+        >
+          ↓ csv
+        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -269,9 +407,10 @@ export default function Analysis({ vibes }: { vibes: Vibe[] }) {
       ) : (
         <>
           <StatsStrip vibes={filtered} />
-          <Heatmap vibes={filtered} />
+          <TrendLine  vibes={filtered} />
+          <Heatmap    vibes={filtered} />
           <ZoneBreakdown vibes={filtered} />
-          <WordAnalysis vibes={filtered} />
+          <WordAnalysis  vibes={filtered} />
         </>
       )}
     </div>

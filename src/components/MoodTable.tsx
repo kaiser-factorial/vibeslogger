@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { vibeColor } from '../lib/vibeColor'
 import type { Vibe } from '../types'
 
@@ -8,7 +8,8 @@ interface Props {
   onUpdate: (id: string, note: string | null) => Promise<{ error: Error | null }>
 }
 
-const LOCK_AFTER_MS = 3 * 60 * 60 * 1000
+const LOCK_AFTER_MS  = 3 * 60 * 60 * 1000
+const UNDO_WINDOW_MS = 5000
 
 function isLocked(createdAt: string): boolean {
   return Date.now() - new Date(createdAt).getTime() > LOCK_AFTER_MS
@@ -23,21 +24,48 @@ function fmtTime(ts: string): string {
   return new Date(ts).toLocaleTimeString()
 }
 
-export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
-  const [confirmId, setConfirmId] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editNote,  setEditNote]  = useState('')
-  const [saving,    setSaving]    = useState(false)
+interface PendingDelete {
+  vibe: Vibe
+  timerId: ReturnType<typeof setTimeout>
+  startedAt: number
+}
 
-  function handleDelete(id: string) {
-    if (confirmId === id) { onDelete(id); setConfirmId(null) }
-    else { setConfirmId(id); setEditingId(null) }
+export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
+  const [editingId,     setEditingId]     = useState<string | null>(null)
+  const [editNote,      setEditNote]      = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [pendingDeletes, setPendingDeletes] = useState<Map<string, PendingDelete>>(new Map())
+  const [tick,          setTick]          = useState(0)
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Tick every 250ms so the countdown numbers stay live while there are pending deletes
+  useEffect(() => {
+    if (pendingDeletes.size > 0) {
+      tickRef.current = setInterval(() => setTick(t => t + 1), 250)
+    } else {
+      if (tickRef.current) clearInterval(tickRef.current)
+    }
+    return () => { if (tickRef.current) clearInterval(tickRef.current) }
+  }, [pendingDeletes.size])
+
+  function startDelete(v: Vibe) {
+    const timerId = setTimeout(async () => {
+      await onDelete(v.id)
+      setPendingDeletes(prev => { const m = new Map(prev); m.delete(v.id); return m })
+    }, UNDO_WINDOW_MS)
+    setPendingDeletes(prev => new Map(prev).set(v.id, { vibe: v, timerId, startedAt: Date.now() }))
+    setEditingId(null)
+  }
+
+  function undoDelete(id: string) {
+    const entry = pendingDeletes.get(id)
+    if (entry) clearTimeout(entry.timerId)
+    setPendingDeletes(prev => { const m = new Map(prev); m.delete(id); return m })
   }
 
   function startEdit(v: Vibe) {
     setEditingId(v.id)
     setEditNote(v.note ?? '')
-    setConfirmId(null)
   }
 
   function cancelEdit() {
@@ -53,94 +81,98 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
     setEditNote('')
   }
 
-  if (vibes.length === 0) return (
+  const displayedVibes = vibes.filter(v => !pendingDeletes.has(v.id))
+
+  if (displayedVibes.length === 0 && pendingDeletes.size === 0) return (
     <div className="table-empty">no vibes logged yet</div>
   )
 
   return (
     <div className="table-wrap">
       <div className="table-header">
-        recorded moods <span className="table-count">{vibes.length}</span>
+        recorded moods <span className="table-count">{displayedVibes.length}</span>
       </div>
-      <table className="vibe-table">
-        <thead>
-          <tr>
-            <th>date</th>
-            <th>time</th>
-            <th>mood</th>
-            <th>notes</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {vibes.map(v => {
-            const locked  = isLocked(v.created_at)
-            const editing = editingId === v.id
 
+      {displayedVibes.length > 0 && (
+        <table className="vibe-table">
+          <thead>
+            <tr>
+              <th>date</th><th>time</th><th>mood</th><th>notes</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedVibes.map(v => {
+              const locked  = isLocked(v.created_at)
+              const editing = editingId === v.id
+
+              return (
+                <tr key={v.id}>
+                  <td className="td-muted">{fmtDate(v.created_at)}</td>
+                  <td className="td-muted">{fmtTime(v.created_at)}</td>
+                  <td className="td-mono">
+                    <span className="vibe-dot"
+                      style={{ background: vibeColor(v.valence, v.arousal) }} />
+                    ({v.valence}, {v.arousal})
+                  </td>
+                  <td className="td-note">
+                    {editing ? (
+                      <input
+                        className="note-edit-input"
+                        value={editNote}
+                        onChange={e => setEditNote(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter')  saveEdit(v.id)
+                          if (e.key === 'Escape') cancelEdit()
+                        }}
+                        autoFocus disabled={saving}
+                      />
+                    ) : (
+                      v.note ?? <span className="td-empty">—</span>
+                    )}
+                  </td>
+                  <td className="td-actions">
+                    {locked ? (
+                      <span className="entry-locked" title="locked after 3 hours">·</span>
+                    ) : editing ? (
+                      <div className="row-actions">
+                        <button className="btn-save" onClick={() => saveEdit(v.id)} disabled={saving}>
+                          {saving ? '...' : 'save'}
+                        </button>
+                        <button className="btn-cancel-edit" onClick={cancelEdit}>×</button>
+                      </div>
+                    ) : (
+                      <div className="row-actions">
+                        <button className="btn-edit" onClick={() => startEdit(v)}>edit</button>
+                        <button className="btn-delete" onClick={() => startDelete(v)}
+                          title="delete">×</button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {/* Undo toast */}
+      {pendingDeletes.size > 0 && (
+        <div className="undo-toast-stack">
+          {[...pendingDeletes.entries()].map(([id, { startedAt }]) => {
+            const elapsed = Date.now() - startedAt
+            const remaining = Math.max(0, Math.ceil((UNDO_WINDOW_MS - elapsed) / 1000))
+            void tick // force re-render via tick
             return (
-              <tr key={v.id}>
-                <td className="td-muted">{fmtDate(v.created_at)}</td>
-                <td className="td-muted">{fmtTime(v.created_at)}</td>
-                <td className="td-mono">
-                  <span
-                    className="vibe-dot"
-                    style={{ background: vibeColor(v.valence, v.arousal) }}
-                  />
-                  ({v.valence}, {v.arousal})
-                </td>
-
-                <td className="td-note">
-                  {editing ? (
-                    <input
-                      className="note-edit-input"
-                      value={editNote}
-                      onChange={e => setEditNote(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter')  saveEdit(v.id)
-                        if (e.key === 'Escape') cancelEdit()
-                      }}
-                      autoFocus
-                      disabled={saving}
-                    />
-                  ) : (
-                    v.note ?? <span className="td-empty">—</span>
-                  )}
-                </td>
-
-                <td className="td-actions">
-                  {locked ? (
-                    <span className="entry-locked" title="locked after 3 hours">·</span>
-                  ) : editing ? (
-                    <div className="row-actions">
-                      <button
-                        className="btn-save"
-                        onClick={() => saveEdit(v.id)}
-                        disabled={saving}
-                      >
-                        {saving ? '...' : 'save'}
-                      </button>
-                      <button className="btn-cancel-edit" onClick={cancelEdit}>×</button>
-                    </div>
-                  ) : (
-                    <div className="row-actions">
-                      <button className="btn-edit" onClick={() => startEdit(v)}>
-                        edit
-                      </button>
-                      <button
-                        className={`btn-delete ${confirmId === v.id ? 'btn-delete-confirm' : ''}`}
-                        onClick={() => handleDelete(v.id)}
-                        title={confirmId === v.id ? 'click again to confirm' : 'delete'}
-                      >
-                        {confirmId === v.id ? '?' : '×'}
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
+              <div key={id} className="undo-toast">
+                <span className="undo-toast-msg">entry deleted</span>
+                <button className="undo-toast-btn" onClick={() => undoDelete(id)}>
+                  undo ({remaining}s)
+                </button>
+              </div>
             )
           })}
-        </tbody>
-      </table>
+        </div>
+      )}
     </div>
   )
 }

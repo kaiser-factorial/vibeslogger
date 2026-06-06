@@ -283,7 +283,6 @@ Currently usernames are immutable email prefixes. A simple profile edit form to 
 
 ## 9. Known Gaps & Gotchas
 
-- **No TypeScript.** The codebase is plain JS. Type errors are runtime errors.
 - **No test suite.** No unit tests, no integration tests, no E2E.
 - **Optimistic updates don't roll back** on error (see §6).
 - **Profile usernames are email prefixes** and currently immutable from the UI.

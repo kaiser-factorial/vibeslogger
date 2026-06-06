@@ -511,6 +511,59 @@ button { -webkit-tap-highlight-color: transparent; }
 .modal-toggle-row input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 .modal-toggle-row--sub { padding-left: 16px; font-size: 10px; color: #444; }
 
+/* ── Undo delete toast ── */
+.undo-toast-stack {
+  position: sticky; bottom: 0;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 0 4px;
+  background: linear-gradient(to bottom, transparent, var(--bg) 30%);
+}
+.undo-toast {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #1a1a2e; border: 1px solid #2a2a4a;
+  border-radius: 6px; padding: 8px 12px;
+  animation: toastIn 0.15s ease;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.undo-toast-msg { font-size: 11px; color: #888; }
+.undo-toast-btn {
+  background: none; border: 1px solid #3a3a5a;
+  color: var(--accent); cursor: pointer; font-family: inherit;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+  padding: 3px 10px; border-radius: 10px;
+  transition: background 0.12s, transform 0.1s;
+}
+.undo-toast-btn:hover  { background: rgba(123,31,162,0.15); }
+.undo-toast-btn:active { transform: scale(0.94); }
+
+/* ── Trend line / sparkline ── */
+.trend-svg {
+  width: 100%; height: 80px; overflow: visible;
+  display: block; margin: 8px 0 4px;
+}
+.trend-indicators {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 4px; flex-wrap: wrap;
+}
+.trend-badge {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+}
+.trend-days { font-size: 10px; color: #444; margin-left: auto; }
+.trend-legend {
+  display: flex; gap: 14px; font-size: 10px; color: #555;
+  flex-wrap: wrap;
+}
+.trend-legend-note { color: #333; }
+
+/* ── Export button ── */
+.filter-export {
+  margin-left: auto; font-size: 10px; padding: 4px 10px;
+}
+.filter-export:disabled { opacity: 0.3; cursor: not-allowed; }
+
 /* ── Timeline ── */
 .timeline-wrap {
   max-width: 680px; margin: 0 auto;
@@ -521,7 +574,7 @@ button { -webkit-tap-highlight-color: transparent; }
   font-size: 11px; font-weight: 700; color: #aaa;
   letter-spacing: 0.08em; margin-bottom: 4px; margin-top: 28px;
 }
-.timeline-section-title:first-child { margin-top: 0; }
+.similar-vibers > .timeline-section-title { margin-top: 0; }
 .timeline-sub { font-size: 10px; color: var(--muted); margin-bottom: 14px; }
 .timeline-empty { font-size: 12px; color: #333; padding: 8px 0; }
 
@@ -548,14 +601,58 @@ button { -webkit-tap-highlight-color: transparent; }
 .tl-meta { font-size: 10px; color: #444; margin-left: auto; white-space: nowrap; }
 .tl-note { font-size: 11px; color: #888; line-height: 1.4; }
 
+/* ── Timeline header row (title + filter toggle) ── */
+.timeline-header-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-top: 28px; margin-bottom: 4px;
+}
+.timeline-header-row:first-child { margin-top: 0; }
+
+/* ── Timeline feed filter (everyone / following) ── */
+.timeline-filter { display: flex; gap: 0; }
+.timeline-filter-btn {
+  background: none; border: 1px solid #1e1e1e;
+  color: var(--muted); cursor: pointer; font-family: inherit;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+  padding: 3px 10px;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+.timeline-filter-btn:first-child { border-radius: 8px 0 0 8px; }
+.timeline-filter-btn:last-child  { border-radius: 0 8px 8px 0; border-left: none; }
+.timeline-filter-btn:hover { color: var(--text); background: #111; }
+.timeline-filter-btn:active { transform: scale(0.95); }
+.timeline-filter-btn--active {
+  background: rgba(123,31,162,0.1);
+  border-color: var(--accent); color: var(--accent);
+}
+
+/* ── Follow button ── */
+.follow-btn {
+  background: none; border: 1px solid #252525;
+  color: #3a3a3a; cursor: pointer; font-family: inherit;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.1s;
+}
+.follow-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(123,31,162,0.08); }
+.follow-btn:active { transform: scale(0.93); }
+.follow-btn--following {
+  border-color: #2a2a3a; color: var(--muted);
+  background: #0d0d1a;
+}
+.follow-btn--following:hover {
+  border-color: var(--danger); color: var(--danger);
+  background: rgba(198,40,40,0.06);
+}
+
 /* ── Similar vibers ── */
 .similar-vibers { margin-bottom: 8px; }
 .similar-sub { font-size: 10px; color: var(--muted); margin-bottom: 12px; }
 .similar-list { display: flex; flex-direction: column; gap: 8px; }
 .similar-row {
   display: grid;
-  grid-template-columns: 140px 1fr 40px;
-  align-items: center; gap: 10px;
+  grid-template-columns: 140px 1fr 36px 68px;
+  align-items: center; gap: 8px;
 }
 .similar-name { font-size: 11px; color: #888; }
 .similar-bar-track { height: 5px; background: #111; border-radius: 3px; overflow: hidden; }

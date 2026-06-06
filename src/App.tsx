@@ -9,6 +9,7 @@ import Analysis from './components/Analysis'
 import Timeline from './components/Timeline'
 import SetPasswordModal from './components/SetPasswordModal'
 import useVibes from './hooks/useVibes'
+import useFollows from './hooks/useFollows'
 import type { PendingVibe } from './types'
 
 type View = 'log' | 'analysis' | 'timeline'
@@ -24,6 +25,7 @@ export default function App() {
   const [showEmotions,    setShowEmotions]    = useState(false)
 
   const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
+  const { followingIds, follow, unfollow } = useFollows(session)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -132,7 +134,12 @@ export default function App() {
           </div>
         ) : (
           <div className="panel-analysis">
-            <Timeline session={session} />
+            <Timeline
+            session={session}
+            followingIds={followingIds}
+            follow={follow}
+            unfollow={unfollow}
+          />
           </div>
         )}
       </main>

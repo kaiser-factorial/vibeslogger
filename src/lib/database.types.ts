@@ -33,6 +33,23 @@ export interface Database {
           created_at?: string
         }
       }
+      follows: {
+        Row: {
+          follower_id: string
+          followee_id: string
+          created_at: string
+        }
+        Insert: {
+          follower_id: string
+          followee_id: string
+          created_at?: string
+        }
+        Update: {
+          follower_id?: string
+          followee_id?: string
+          created_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string
