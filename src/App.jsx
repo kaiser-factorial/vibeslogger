@@ -5,6 +5,7 @@ import MoodGrid from './components/MoodGrid'
 import MoodTable from './components/MoodTable'
 import MoodModal from './components/MoodModal'
 import Analysis from './components/Analysis'
+import Timeline from './components/Timeline'
 import SetPasswordModal from './components/SetPasswordModal'
 import useVibes from './hooks/useVibes'
 
@@ -44,16 +45,16 @@ export default function App() {
     if (!expanded) setExpanded(true)
   }
 
-  async function handleModalSubmit(note) {
+  async function handleModalSubmit(note, isPublic, isNotePublic) {
     if (!pendingVibe) return
-    await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note })
+    await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note, isPublic, isNotePublic })
     setPendingVibe(null)
   }
 
   if (authLoading) return <div className="loading">loading...</div>
   if (!session)    return <Auth />
 
-  const layoutClass = view === 'analysis'
+  const layoutClass = (view === 'analysis' || view === 'timeline')
     ? 'app--analysis'
     : expanded ? 'app--expanded' : 'app--landing'
 
@@ -89,6 +90,12 @@ export default function App() {
           >
             analyze
           </button>
+          <button
+            className={`nav-tab ${view === 'timeline' ? 'nav-tab--active' : ''}`}
+            onClick={() => setView('timeline')}
+          >
+            timeline
+          </button>
         </nav>
       </header>
 
@@ -116,9 +123,13 @@ export default function App() {
               </div>
             )}
           </>
-        ) : (
+        ) : view === 'analysis' ? (
           <div className="panel-analysis">
             <Analysis vibes={vibes} />
+          </div>
+        ) : (
+          <div className="panel-analysis">
+            <Timeline session={session} />
           </div>
         )}
       </main>

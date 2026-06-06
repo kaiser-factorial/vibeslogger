@@ -24,10 +24,17 @@ export default function useVibes(session) {
     setLoading(false)
   }
 
-  async function addVibe({ x, y, note }) {
+  async function addVibe({ x, y, note, isPublic = true, isNotePublic = false }) {
     const { data, error } = await supabase
       .from('vibes')
-      .insert({ user_id: session.user.id, valence: x, arousal: y, note: note || null })
+      .insert({
+        user_id:     session.user.id,
+        valence:     x,
+        arousal:     y,
+        note:        note || null,
+        public:      isPublic,
+        note_public: isNotePublic,
+      })
       .select()
       .single()
     if (!error && data) setVibes(prev => [data, ...prev])

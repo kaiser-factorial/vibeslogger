@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 
-/**
- * MoodModal — appears after clicking the grid, lets user add a note.
- * Sits on top of the full layout (not inside the grid) for clean separation.
- */
 export default function MoodModal({ vibe, onSubmit, onClose }) {
-  const [note, setNote] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [note,        setNote]        = useState('')
+  const [isPublic,    setIsPublic]    = useState(true)
+  const [notePublic,  setNotePublic]  = useState(false)
+  const [saving,      setSaving]      = useState(false)
   const textareaRef = useRef(null)
 
-  const wordCount  = note.trim() ? note.trim().split(/\s+/).length : 0
-  const showHint   = wordCount > 0 && wordCount < 3
+  const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0
+  const showHint  = wordCount > 0 && wordCount < 3
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -19,9 +17,14 @@ export default function MoodModal({ vibe, onSubmit, onClose }) {
     return () => window.removeEventListener('keydown', onEsc)
   }, [])
 
+  function handlePublicToggle(val) {
+    setIsPublic(val)
+    if (!val) setNotePublic(false)
+  }
+
   async function handleSubmit() {
     setSaving(true)
-    await onSubmit(note.trim())
+    await onSubmit(note.trim(), isPublic, notePublic && !!note.trim())
     setSaving(false)
   }
 
@@ -44,6 +47,26 @@ export default function MoodModal({ vibe, onSubmit, onClose }) {
             {wordCount} word{wordCount !== 1 ? 's' : ''} — add a few more to count toward word analysis
           </div>
         )}
+        <div className="modal-toggles">
+          <label className="modal-toggle-row">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={e => handlePublicToggle(e.target.checked)}
+            />
+            <span>post to timeline</span>
+          </label>
+          {isPublic && note.trim() && (
+            <label className="modal-toggle-row modal-toggle-row--sub">
+              <input
+                type="checkbox"
+                checked={notePublic}
+                onChange={e => setNotePublic(e.target.checked)}
+              />
+              <span>include note publicly</span>
+            </label>
+          )}
+        </div>
         <div className="modal-actions">
           <button className="btn-primary" onClick={handleSubmit} disabled={saving}>
             {saving ? 'saving...' : 'log it'}
