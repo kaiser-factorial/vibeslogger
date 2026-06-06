@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function SetPasswordModal({ onClose }) {
+interface Props {
+  onClose: () => void
+}
+
+export default function SetPasswordModal({ onClose }: Props) {
   const [password, setPassword]   = useState('')
   const [confirm,  setConfirm]    = useState('')
   const [loading,  setLoading]    = useState(false)
   const [done,     setDone]       = useState(false)
-  const [error,    setError]      = useState(null)
+  const [error,    setError]      = useState<string | null>(null)
 
-  async function handleSubmit(e) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (password !== confirm) { setError("passwords don't match"); return }
     setLoading(true); setError(null)

@@ -286,7 +286,6 @@ Currently usernames are immutable email prefixes. A simple profile edit form to 
 - **No TypeScript.** The codebase is plain JS. Type errors are runtime errors.
 - **No test suite.** No unit tests, no integration tests, no E2E.
 - **Optimistic updates don't roll back** on error (see §6).
-- **Existing vibes got `public = true`** when the column was added (Postgres DEFAULT backfills existing rows). Users have no way to retroactively make old entries private yet — that would need a bulk-edit UI or a migration defaulting existing rows to false.
 - **Profile usernames are email prefixes** and currently immutable from the UI.
 - **`labelScale` on mobile** scales all label font sizes by 0.58. If label sizes are adjusted, verify at mobile widths.
 - **The 3-hour lock constant exists in two places**: `MoodTable.jsx` (client) and the Supabase RLS policy (server). They must stay in sync.

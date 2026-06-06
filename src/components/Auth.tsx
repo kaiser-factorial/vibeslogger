@@ -1,18 +1,20 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+type AuthMode = 'magic' | 'password'
+
 export default function Auth() {
-  const [mode,     setMode]     = useState('magic')   // 'magic' | 'password'
+  const [mode,     setMode]     = useState<AuthMode>('magic')
   const [isSignUp, setIsSignUp] = useState(false)
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [loading,  setLoading]  = useState(false)
   const [sent,     setSent]     = useState(false)
-  const [error,    setError]    = useState(null)
+  const [error,    setError]    = useState<string | null>(null)
 
-  function switchMode(m) { setMode(m); setError(null); setSent(false) }
+  function switchMode(m: AuthMode) { setMode(m); setError(null); setSent(false) }
 
-  async function handleMagicLink(e) {
+  async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError(null)
     const { error } = await supabase.auth.signInWithOtp({
@@ -24,7 +26,7 @@ export default function Auth() {
     else setSent(true)
   }
 
-  async function handlePassword(e) {
+  async function handlePassword(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError(null)
     const { error } = isSignUp
@@ -32,7 +34,7 @@ export default function Auth() {
       : await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
     if (error) setError(error.message)
-    // success: onAuthStateChange in App.jsx handles session
+    // success: onAuthStateChange in App.tsx handles session
   }
 
   if (sent) return (

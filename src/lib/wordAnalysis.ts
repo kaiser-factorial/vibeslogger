@@ -1,4 +1,11 @@
+import type { ZoneId } from './zones'
 import { getZone } from './zones'
+import type { Vibe } from '../types'
+
+export interface WordCount {
+  word: string
+  count: number
+}
 
 const STOP_WORDS = new Set([
   'a','an','the','and','or','but','in','on','at','to','for','of','with','by',
@@ -18,7 +25,7 @@ const STOP_WORDS = new Set([
   'think','know','want','need','said','just','things','thing','way','make',
 ])
 
-function tokenize(text) {
+function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[^a-z\s]/g, ' ')
@@ -26,15 +33,15 @@ function tokenize(text) {
     .filter(w => w.length > 2 && !STOP_WORDS.has(w))
 }
 
-// Returns top N {word, count} pairs from vibes whose notes have >= 3 words.
-export function topWords(vibes, n = 5) {
-  const counts = {}
+/** Returns top N {word, count} pairs from vibes whose notes have >= 3 words. */
+export function topWords(vibes: Vibe[], n = 5): WordCount[] {
+  const counts: Record<string, number> = {}
   for (const v of vibes) {
     if (!v.note) continue
     const raw = v.note.trim()
     if (!raw || raw.split(/\s+/).length < 3) continue
     for (const w of tokenize(raw)) {
-      counts[w] = (counts[w] || 0) + 1
+      counts[w] = (counts[w] ?? 0) + 1
     }
   }
   return Object.entries(counts)
@@ -43,19 +50,19 @@ export function topWords(vibes, n = 5) {
     .map(([word, count]) => ({ word, count }))
 }
 
-// Returns { zoneId: [{word, count}] } for all zones that have qualifying notes.
-export function topWordsByZone(vibes, n = 5) {
-  const byZone = {}
+/** Returns { zoneId: WordCount[] } for all zones that have qualifying notes. */
+export function topWordsByZone(vibes: Vibe[], n = 5): Partial<Record<ZoneId, WordCount[]>> {
+  const byZone: Partial<Record<ZoneId, Vibe[]>> = {}
   for (const v of vibes) {
     if (!v.note) continue
     const raw = v.note.trim()
     if (!raw || raw.split(/\s+/).length < 3) continue
     const zone = getZone(v.valence, v.arousal)
     if (!byZone[zone]) byZone[zone] = []
-    byZone[zone].push(v)
+    byZone[zone]!.push(v)
   }
-  const result = {}
-  for (const [zone, zVibes] of Object.entries(byZone)) {
+  const result: Partial<Record<ZoneId, WordCount[]>> = {}
+  for (const [zone, zVibes] of Object.entries(byZone) as [ZoneId, Vibe[]][]) {
     const words = topWords(zVibes, n)
     if (words.length > 0) result[zone] = words
   }

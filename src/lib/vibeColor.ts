@@ -8,7 +8,7 @@
  * a grey/flat look and high-energy dots a vivid, alive appearance.
  * Zone backgrounds are unaffected — this only applies to plotted points.
  */
-export function vibeColor(valence, arousal) {
+export function vibeColor(valence: number, arousal: number): string {
   const t          = (arousal  - 1) / 9   // 0 → 1
   const hue        = ((valence - 1) / 9) * 120   // 0° → 120°
   const saturation = 35 + t * 55                  // 35% → 90%

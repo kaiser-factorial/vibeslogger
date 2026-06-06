@@ -1,23 +1,47 @@
 import { useRef, useState, useEffect } from 'react'
 import { vibeColor } from '../lib/vibeColor'
+import type { Vibe, PendingVibe } from '../types'
+
+interface Zone {
+  x1: number; y1: number; x2: number; y2: number
+  bg: string; z?: number
+}
+
+interface Label {
+  text: string; cx: string; cy: string; sz: number; fw: number
+}
+
+interface Emotion {
+  text: string; vx: number; ay: number
+}
+
+interface Props {
+  vibes: Vibe[]
+  onGridClick: (x: number, y: number) => void
+  pendingVibe: PendingVibe | null
+  showLabels: boolean
+  showEmotions: boolean
+  onToggleLabels: () => void
+  onToggleEmotions: () => void
+}
 
 // ── Zone rectangles (x1/y1 = top-left %, x2/y2 = bottom-right %) ─────────────
 // Derived from SVG mockup (grid 615×615). "It is what it is" is two rects:
 // a horizontal band (0–57%, 43–61%) + a vertical column (42–57%, 61–100%),
 // forming an upside-down T that divides the bottom-left and bottom-right zones.
-const ZONES = [
-  { x1:  0, y1:  0, x2: 42, y2: 43, bg: '#A52828' },          // red   — Fuck it we ball
-  { x1: 42, y1:  0, x2:100, y2: 61, bg: '#5E6E20' },          // olive — We are so fucking back
-  { x1: 78, y1:  0, x2:100, y2: 18, bg: '#D4CC20', z: 4 },   // yellow corner — LFG
-  { x1:  0, y1: 43, x2: 57, y2: 61, bg: '#D08020', z: 2 },   // orange band — It is what it is (horizontal)
-  { x1: 42, y1: 61, x2: 57, y2:100, bg: '#D08020', z: 2 },   // orange column — It is what it is (vertical)
-  { x1:  0, y1: 61, x2: 42, y2:100, bg: '#7FB5CC' },          // blue  — It's so over
-  { x1: 57, y1: 61, x2:100, y2:100, bg: '#5E9870' },          // sage  — We vibing
-  { x1:  0, y1: 87, x2: 15, y2:100, bg: '#5050A8', z: 4 },   // purple corner — log off forever
+const ZONES: Zone[] = [
+  { x1:  0, y1:  0, x2: 42, y2: 43, bg: '#A52828' },
+  { x1: 42, y1:  0, x2:100, y2: 61, bg: '#5E6E20' },
+  { x1: 78, y1:  0, x2:100, y2: 18, bg: '#D4CC20', z: 4 },
+  { x1:  0, y1: 43, x2: 57, y2: 61, bg: '#D08020', z: 2 },
+  { x1: 42, y1: 61, x2: 57, y2:100, bg: '#D08020', z: 2 },
+  { x1:  0, y1: 61, x2: 42, y2:100, bg: '#7FB5CC' },
+  { x1: 57, y1: 61, x2:100, y2:100, bg: '#5E9870' },
+  { x1:  0, y1: 87, x2: 15, y2:100, bg: '#5050A8', z: 4 },
 ]
 
 // Zone labels — cx/cy = center of zone, text centered via translate(-50%,-50%)
-const LABELS = [
+const LABELS: Label[] = [
   { text: 'fuck it\nwe ball',         cx: '21%', cy: '22%', sz: 28,  fw: 900 },
   { text: 'we are so\nfucking back',  cx: '64%', cy: '33%', sz: 22,  fw: 900 },
   { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 9.5, fw: 700 },
@@ -28,8 +52,7 @@ const LABELS = [
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
-// vx = valence (1-10), ay = arousal (1-10)
-const EMOTIONS = [
+const EMOTIONS: Emotion[] = [
   { text: 'tense',     vx: 2.5, ay: 9.5 },
   { text: 'afraid',    vx: 1.5, ay: 8.5 },
   { text: 'angry',     vx: 2.5, ay: 8   },
@@ -49,18 +72,18 @@ const EMOTIONS = [
   { text: 'tired',     vx: 4,   ay: 2   },
 ]
 
-function toRel(valence, arousal) {
+function toRel(valence: number, arousal: number) {
   return { rx: (valence - 1) / 9, ry: 1 - (arousal - 1) / 9 }
 }
 
-function fromRel(rx, ry) {
+function fromRel(rx: number, ry: number) {
   return {
     x: parseFloat((1 + rx * 9).toFixed(2)),
     y: parseFloat((10 - ry * 9).toFixed(2)),
   }
 }
 
-function useIsMobile(breakpoint = 768) {
+function useIsMobile(breakpoint = 768): boolean {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint)
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < breakpoint)
@@ -74,12 +97,13 @@ export default function MoodGrid({
   vibes, onGridClick, pendingVibe,
   showLabels, showEmotions,
   onToggleLabels, onToggleEmotions,
-}) {
-  const gridRef  = useRef(null)
-  const isMobile = useIsMobile()
+}: Props) {
+  const gridRef    = useRef<HTMLDivElement>(null)
+  const isMobile   = useIsMobile()
   const labelScale = isMobile ? 0.58 : 1
 
-  function handleClick(e) {
+  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!gridRef.current) return
     const rect = gridRef.current.getBoundingClientRect()
     const rx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
     const ry = Math.max(0, Math.min(1, (e.clientY - rect.top)  / rect.height))
@@ -106,7 +130,7 @@ export default function MoodGrid({
               right:  `${100 - z.x2}%`,
               bottom: `${100 - z.y2}%`,
               background: z.bg,
-              zIndex: z.z || 1,
+              zIndex: z.z ?? 1,
               pointerEvents: 'none',
             }} />
           ))}

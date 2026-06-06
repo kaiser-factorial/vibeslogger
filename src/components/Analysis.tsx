@@ -1,16 +1,17 @@
 import { useMemo, useState } from 'react'
 import { getZone, ZONE_META, ZONE_ORDER } from '../lib/zones'
 import { topWordsByZone } from '../lib/wordAnalysis'
+import type { Vibe } from '../types'
 
 export const UNLOCK_THRESHOLD = 10
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-function avg(arr) {
+function avg(arr: number[]): number {
   return arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : 0
 }
 
-function filterByDate(vibes, from, to) {
+function filterByDate(vibes: Vibe[], from: string, to: string): Vibe[] {
   return vibes.filter(v => {
     const d = new Date(v.created_at)
     if (from && d < new Date(from)) return false
@@ -23,8 +24,8 @@ function filterByDate(vibes, from, to) {
   })
 }
 
-function buildHeatmap(vibes) {
-  const grid = Array.from({ length: 10 }, () => Array(10).fill(0))
+function buildHeatmap(vibes: Vibe[]): number[][] {
+  const grid: number[][] = Array.from({ length: 10 }, () => Array(10).fill(0))
   for (const v of vibes) {
     const col = Math.min(9, Math.max(0, Math.floor(v.valence - 1)))
     const row = Math.min(9, Math.max(0, Math.floor(v.arousal - 1)))
@@ -35,7 +36,7 @@ function buildHeatmap(vibes) {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function StatsStrip({ vibes }) {
+function StatsStrip({ vibes }: { vibes: Vibe[] }) {
   const avgV = avg(vibes.map(v => v.valence))
   const avgA = avg(vibes.map(v => v.arousal))
   const withNotes = vibes.filter(v => v.note && v.note.trim().split(/\s+/).length >= 3).length
@@ -62,7 +63,7 @@ function StatsStrip({ vibes }) {
   )
 }
 
-function Heatmap({ vibes }) {
+function Heatmap({ vibes }: { vibes: Vibe[] }) {
   const grid   = useMemo(() => buildHeatmap(vibes), [vibes])
   const maxVal = useMemo(() => Math.max(1, ...grid.flat()), [grid])
 
@@ -78,10 +79,10 @@ function Heatmap({ vibes }) {
         <div className="heatmap-col">
           <div className="heatmap-grid">
             {Array.from({ length: 100 }, (_, i) => {
-              const displayRow   = Math.floor(i / 10)
-              const displayCol   = i % 10
+              const displayRow    = Math.floor(i / 10)
+              const displayCol    = i % 10
               const arousalBucket = 9 - displayRow
-              const count  = grid[arousalBucket][displayCol]
+              const count   = grid[arousalBucket][displayCol]
               const opacity = count === 0
                 ? 0
                 : 0.12 + (count / maxVal) * 0.88
@@ -107,12 +108,12 @@ function Heatmap({ vibes }) {
   )
 }
 
-function ZoneBreakdown({ vibes }) {
+function ZoneBreakdown({ vibes }: { vibes: Vibe[] }) {
   const counts = useMemo(() => {
-    const c = {}
+    const c: Record<string, number> = {}
     for (const v of vibes) {
       const z = getZone(v.valence, v.arousal)
-      c[z] = (c[z] || 0) + 1
+      c[z] = (c[z] ?? 0) + 1
     }
     return c
   }, [vibes])
@@ -120,7 +121,7 @@ function ZoneBreakdown({ vibes }) {
   const total  = vibes.length || 1
   const sorted = ZONE_ORDER
     .filter(z => counts[z])
-    .sort((a, b) => (counts[b] || 0) - (counts[a] || 0))
+    .sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0))
 
   if (!sorted.length) return null
 
@@ -150,9 +151,9 @@ function ZoneBreakdown({ vibes }) {
   )
 }
 
-function WordAnalysis({ vibes }) {
+function WordAnalysis({ vibes }: { vibes: Vibe[] }) {
   const byZone = useMemo(() => topWordsByZone(vibes, 5), [vibes])
-  const populated = ZONE_ORDER.filter(z => byZone[z]?.length > 0)
+  const populated = ZONE_ORDER.filter(z => (byZone[z]?.length ?? 0) > 0)
 
   const qualifyingNotes = vibes.filter(
     v => v.note && v.note.trim().split(/\s+/).length >= 3
@@ -193,7 +194,7 @@ function WordAnalysis({ vibes }) {
             >
               <div className="word-zone-name" style={{ color }}>{label}</div>
               <div className="word-chips">
-                {byZone[zoneId].map(({ word, count }) => (
+                {byZone[zoneId]!.map(({ word, count }) => (
                   <span key={word} className="word-chip">
                     {word}
                     {count > 1 && <span className="word-chip-count">×{count}</span>}
@@ -210,14 +211,13 @@ function WordAnalysis({ vibes }) {
 
 // ── main export ───────────────────────────────────────────────────────────────
 
-export default function Analysis({ vibes }) {
+export default function Analysis({ vibes }: { vibes: Vibe[] }) {
   const [from, setFrom] = useState('')
   const [to,   setTo]   = useState('')
 
   const filtered  = useMemo(() => filterByDate(vibes, from, to), [vibes, from, to])
   const hasFilter = from || to
 
-  // Lock gate — based on total vibes, not the filtered slice
   if (vibes.length < UNLOCK_THRESHOLD) {
     const needed = UNLOCK_THRESHOLD - vibes.length
     const pct    = Math.round((vibes.length / UNLOCK_THRESHOLD) * 100)
@@ -239,8 +239,6 @@ export default function Analysis({ vibes }) {
 
   return (
     <div className="analysis-wrap">
-
-      {/* Date filter */}
       <div className="analysis-filter">
         <label className="filter-label">from</label>
         <input

@@ -1,23 +1,30 @@
 import { useState, useEffect, useRef } from 'react'
+import type { PendingVibe } from '../types'
 
-export default function MoodModal({ vibe, onSubmit, onClose }) {
+interface Props {
+  vibe: PendingVibe
+  onSubmit: (note: string, isPublic: boolean, isNotePublic: boolean) => Promise<void>
+  onClose: () => void
+}
+
+export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
   const [note,        setNote]        = useState('')
   const [isPublic,    setIsPublic]    = useState(true)
   const [notePublic,  setNotePublic]  = useState(false)
   const [saving,      setSaving]      = useState(false)
-  const textareaRef = useRef(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0
   const showHint  = wordCount > 0 && wordCount < 3
 
   useEffect(() => {
     textareaRef.current?.focus()
-    const onEsc = (e) => { if (e.key === 'Escape') onClose() }
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
   }, [])
 
-  function handlePublicToggle(val) {
+  function handlePublicToggle(val: boolean) {
     setIsPublic(val)
     if (!val) setNotePublic(false)
   }

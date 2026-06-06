@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import MoodGrid from './components/MoodGrid'
@@ -8,14 +9,16 @@ import Analysis from './components/Analysis'
 import Timeline from './components/Timeline'
 import SetPasswordModal from './components/SetPasswordModal'
 import useVibes from './hooks/useVibes'
+import type { PendingVibe } from './types'
+
+type View = 'log' | 'analysis' | 'timeline'
 
 export default function App() {
-  const [session,     setSession]     = useState(null)
+  const [session,     setSession]     = useState<Session | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
-  // localStorage hint: skip landing flash on return visits
   const [expanded,    setExpanded]    = useState(() => localStorage.getItem('vl-has-vibes') === 'true')
-  const [view,        setView]        = useState('log')   // 'log' | 'analysis'
-  const [pendingVibe,     setPendingVibe]     = useState(null)
+  const [view,        setView]        = useState<View>('log')
+  const [pendingVibe,     setPendingVibe]     = useState<PendingVibe | null>(null)
   const [settingPassword, setSettingPassword] = useState(false)
   const [showLabels,      setShowLabels]      = useState(true)
   const [showEmotions,    setShowEmotions]    = useState(false)
@@ -40,12 +43,12 @@ export default function App() {
     }
   }, [vibes])
 
-  function handleGridClick(x, y) {
+  function handleGridClick(x: number, y: number) {
     setPendingVibe({ x, y })
     if (!expanded) setExpanded(true)
   }
 
-  async function handleModalSubmit(note, isPublic, isNotePublic) {
+  async function handleModalSubmit(note: string, isPublic: boolean, isNotePublic: boolean) {
     if (!pendingVibe) return
     await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note, isPublic, isNotePublic })
     setPendingVibe(null)

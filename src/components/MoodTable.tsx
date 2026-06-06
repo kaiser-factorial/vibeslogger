@@ -1,35 +1,42 @@
 import { useState } from 'react'
 import { vibeColor } from '../lib/vibeColor'
+import type { Vibe } from '../types'
+
+interface Props {
+  vibes: Vibe[]
+  onDelete: (id: string) => Promise<{ error: Error | null }>
+  onUpdate: (id: string, note: string | null) => Promise<{ error: Error | null }>
+}
 
 const LOCK_AFTER_MS = 3 * 60 * 60 * 1000
 
-function isLocked(createdAt) {
+function isLocked(createdAt: string): boolean {
   return Date.now() - new Date(createdAt).getTime() > LOCK_AFTER_MS
 }
 
-function fmtDate(ts) {
+function fmtDate(ts: string): string {
   const d = new Date(ts)
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
 }
 
-function fmtTime(ts) {
+function fmtTime(ts: string): string {
   return new Date(ts).toLocaleTimeString()
 }
 
-export default function MoodTable({ vibes, onDelete, onUpdate }) {
-  const [confirmId, setConfirmId] = useState(null)
-  const [editingId, setEditingId] = useState(null)
+export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editNote,  setEditNote]  = useState('')
   const [saving,    setSaving]    = useState(false)
 
-  function handleDelete(id) {
+  function handleDelete(id: string) {
     if (confirmId === id) { onDelete(id); setConfirmId(null) }
     else { setConfirmId(id); setEditingId(null) }
   }
 
-  function startEdit(v) {
+  function startEdit(v: Vibe) {
     setEditingId(v.id)
-    setEditNote(v.note || '')
+    setEditNote(v.note ?? '')
     setConfirmId(null)
   }
 
@@ -38,7 +45,7 @@ export default function MoodTable({ vibes, onDelete, onUpdate }) {
     setEditNote('')
   }
 
-  async function saveEdit(id) {
+  async function saveEdit(id: string) {
     setSaving(true)
     await onUpdate(id, editNote.trim() || null)
     setSaving(false)
@@ -82,7 +89,6 @@ export default function MoodTable({ vibes, onDelete, onUpdate }) {
                   ({v.valence}, {v.arousal})
                 </td>
 
-                {/* Note cell — view or edit */}
                 <td className="td-note">
                   {editing ? (
                     <input
@@ -97,11 +103,10 @@ export default function MoodTable({ vibes, onDelete, onUpdate }) {
                       disabled={saving}
                     />
                   ) : (
-                    v.note || <span className="td-empty">—</span>
+                    v.note ?? <span className="td-empty">—</span>
                   )}
                 </td>
 
-                {/* Action cell */}
                 <td className="td-actions">
                   {locked ? (
                     <span className="entry-locked" title="locked after 3 hours">·</span>
