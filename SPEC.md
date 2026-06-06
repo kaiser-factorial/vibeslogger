@@ -193,6 +193,7 @@ Low-arousal states get dark, muted colors; high-arousal states get bright, vivid
 - When a vibe is logged, `App.handleModalSubmit` calls `setAccentFromVibe(valence, arousal)`, which maps the click to a zone via `getZone()` and repaints the accent in that zone's color (e.g. logging in the yellow "LFG" area → yellow accents).
 - The accent is driven by CSS custom properties on `:root` (`--accent`, `--accent-hover`, `--accent-ink`, `--accent-rgb`, `--accent-glow`); `applyAccent()` sets them all at once. `--accent-ink` (button text) is chosen per zone by perceptual luminance so light accents like yellow get dark text.
 - **Persistence:** the chosen zone is stored in `sessionStorage` (`vl-accent-zone`), so it survives reloads within the browser session but resets to cream on sign-out or when a different user signs in. `--danger` (red) is intentionally left fixed for destructive actions (delete, unfollow).
+- **Neutral chrome:** all non-accent UI chrome (surfaces, borders, input/hover backgrounds, tooltips) uses neutral charcoal grays rather than the previous blue/purple-tinted darks, so the dynamic accent and the rainbow background carry the color. Exceptions that stay colored on purpose: the seven zone squares in `MoodGrid`, the background gradient, and the valence/arousal trend-line series in `Analysis` (two distinct data colors).
 
 ### Auth (`src/components/Auth.tsx`)
 - Two tabs: magic link (OTP email) and email/password
