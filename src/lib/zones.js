@@ -10,17 +10,18 @@ export const ZONE_META = {
 
 export const ZONE_ORDER = ['lfg', 'back', 'ball', 'vibing', 'over', 'whatitis', 'mwbs']
 
-// Maps a (valence, arousal) coordinate to a zone id.
-// Special corners take priority, then quadrant split at 5/5,
-// with the middle band (3.5–6.5 × 3.5–6.5) as "whatitis".
+// Maps (valence, arousal) to a zone id, based on SVG mockup boundaries.
+// Zone split points (converted from grid %):
+//   valence: 4.8 (42%), 6.1 (57%), 8.0 (78%)
+//   arousal: 4.5 (61%), 6.1 (43%), 8.4 (18% from top)
+// "whatitis" is an upside-down T: horizontal band (v<6.1, 4.5≤a≤6.1)
+//   plus vertical column (4.8≤v<6.1, a<4.5).
 export function getZone(valence, arousal) {
-  if (valence >= 8.5 && arousal >= 8.5) return 'lfg'
-  if (valence <= 2   && arousal <= 2)   return 'mwbs'
-  if (valence >= 3.5 && valence <= 6.5 && arousal >= 3.5 && arousal <= 6.5) return 'whatitis'
-  const highArousal = arousal >= 5
-  const highValence = valence >= 5
-  if ( highArousal && !highValence) return 'ball'
-  if ( highArousal &&  highValence) return 'back'
-  if (!highArousal && !highValence) return 'over'
+  if (valence >= 8.0 && arousal >= 8.4) return 'lfg'
+  if (valence <= 2.4 && arousal <= 2.2) return 'mwbs'
+  if (arousal > 6.1)  return valence < 4.8 ? 'ball' : 'back'
+  if (arousal >= 4.5) return valence < 6.1 ? 'whatitis' : 'back'
+  if (valence < 4.8)  return 'over'
+  if (valence < 6.1)  return 'whatitis'
   return 'vibing'
 }

@@ -2,28 +2,30 @@ import { useRef, useState, useEffect } from 'react'
 import { vibeColor } from '../lib/vibeColor'
 
 // ── Zone rectangles (x1/y1 = top-left %, x2/y2 = bottom-right %) ─────────────
-// Left column (x: 0-45%) has 3 stacked zones; right column (x: 45-100%) has 2.
-// Orange "it is what it is" band extends past the vertical midline into the olive zone.
+// Derived from SVG mockup (grid 615×615). "It is what it is" is two rects:
+// a horizontal band (0–57%, 43–61%) + a vertical column (42–57%, 61–100%),
+// forming an upside-down T that divides the bottom-left and bottom-right zones.
 const ZONES = [
-  { x1:  0, y1:  0, x2: 45, y2: 50, bg: '#A52828' },           // red   — Fuck it we ball
-  { x1: 45, y1:  0, x2:100, y2: 68, bg: '#5E6E20' },           // olive — We are so fucking back
-  { x1: 83, y1:  0, x2:100, y2: 17, bg: '#D4CC20', z: 4 },    // yellow corner — LFG
-  { x1:  0, y1: 49, x2: 62, y2: 69, bg: '#D08020', z: 2 },    // orange — It is what it is
-  { x1:  0, y1: 68, x2: 45, y2:100, bg: '#7FB5CC' },           // blue  — It's so over
-  { x1: 45, y1: 68, x2:100, y2:100, bg: '#5E9870' },           // sage  — We vibing
-  { x1:  0, y1: 88, x2: 16, y2:100, bg: '#5050A8', z: 4 },    // purple corner — Mom would be sad
+  { x1:  0, y1:  0, x2: 42, y2: 43, bg: '#A52828' },          // red   — Fuck it we ball
+  { x1: 42, y1:  0, x2:100, y2: 61, bg: '#5E6E20' },          // olive — We are so fucking back
+  { x1: 78, y1:  0, x2:100, y2: 18, bg: '#D4CC20', z: 4 },   // yellow corner — LFG
+  { x1:  0, y1: 43, x2: 57, y2: 61, bg: '#D08020', z: 2 },   // orange band — It is what it is (horizontal)
+  { x1: 42, y1: 61, x2: 57, y2:100, bg: '#D08020', z: 2 },   // orange column — It is what it is (vertical)
+  { x1:  0, y1: 61, x2: 42, y2:100, bg: '#7FB5CC' },          // blue  — It's so over
+  { x1: 57, y1: 61, x2:100, y2:100, bg: '#5E9870' },          // sage  — We vibing
+  { x1:  0, y1: 87, x2: 15, y2:100, bg: '#5050A8', z: 4 },   // purple corner — log off forever
 ]
 
 // Zone labels
 const LABELS = [
-  { text: 'Fuck it\nwe ball',         x: '5%',    y: '5%',    sz: 26, fw: 900 },
-  { text: 'We are so\nfucking back',  x: '47%',   y: '3%',    sz: 22, fw: 900, rot: -11, ital: true },
-  { text: 'LETS FUCKING\nGOOOOOOOO', x: '83.5%', y: '1.5%',  sz: 9,  fw: 700, c: '#111' },
-  { text: 'It is',                    x: '5%',    y: '51%',   sz: 20, fw: 700 },
-  { text: 'what\nit is',              x: '29%',   y: '50%',   sz: 20, fw: 700, rot: -9, ital: true },
-  { text: "It's so\nover",            x: '4%',    y: '70%',   sz: 24, fw: 900 },
-  { text: 'We\nvibing',               x: '55%',   y: '70%',   sz: 28, fw: 900 },
-  { text: 'log off\nforever',          x: '0.5%',  y: '88.5%', sz: 8,  fw: 500 },
+  { text: 'Fuck it\nwe ball',         x: '5%',   y: '5%',    sz: 26, fw: 900 },
+  { text: 'We are so\nfucking back',  x: '46%',  y: '3%',    sz: 22, fw: 900, rot: -11, ital: true },
+  { text: 'LETS FUCKING\nGOOOOOOOO', x: '79%',  y: '1.5%',  sz: 9,  fw: 700, c: '#111' },
+  { text: 'It is',                    x: '5%',   y: '45%',   sz: 20, fw: 700 },
+  { text: 'what\nit is',              x: '27%',  y: '44%',   sz: 20, fw: 700, rot: -9, ital: true },
+  { text: "It's so\nover",            x: '4%',   y: '64%',   sz: 24, fw: 900 },
+  { text: 'We\nvibing',               x: '60%',  y: '64%',   sz: 28, fw: 900 },
+  { text: 'log off\nforever',         x: '0.5%', y: '87.5%', sz: 8,  fw: 500 },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
