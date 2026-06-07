@@ -137,7 +137,7 @@ Each logged vibe is rendered as a colored dot. Color encodes both dimensions:
 
 Low-arousal states get dark, muted colors; high-arousal states get bright, vivid ones.
 
-The **mood grid points** (in explore mode), the **"recorded moods" table dots**, and the **timeline dots** all use `gridColor(valence, arousal)` from `lib/zones.ts`, which returns the bright vibe-square color of the zone the point sits in (`GRID_ZONE_COLOR`). This makes a logged mood's dot match the square it lives in, consistently across grid, table, and timeline. `vibeColor` (HSL) now only drives the **share cards**. (Three palettes coexist by design: muted `ZONE_META` for accents/labels, bright `GRID_ZONE_COLOR` for square/points/table/timeline dots, and the `vibeColor` HSL gradient for share cards.)
+The **mood grid points** (in explore mode), the **"recorded moods" table dots**, the **timeline dots**, and the **share cards** all use `gridColor(valence, arousal)` from `lib/zones.ts`, which returns the bright vibe-square color of the zone the point sits in (`GRID_ZONE_COLOR`). This makes a logged mood's dot match the square it lives in, consistently across every surface. (Two palettes coexist by design: muted `ZONE_META` for accents/labels, and bright `GRID_ZONE_COLOR` for grid points, table/timeline dots, and share card dots. `vibeColor` from `lib/vibeColor.ts` is retained in the codebase but no longer used in the display layer.)
 
 ---
 
@@ -347,7 +347,7 @@ Show a "follows you back" badge next to usernames in similar vibers. Requires a 
 - **Timeline pagination only applies to the "everyone" feed.** The "following" filter is applied client-side over already-loaded entries, so it only covers the pages fetched so far.
 - **Share links encode vibe data client-side** — they are not validated against the DB when viewed. A share link for a private-later-made vibe will still show the original data.
 - **PWA is not offline-capable for data.** Static assets are cached; Supabase API calls are always network-only. The app requires connectivity to log or fetch vibes.
-- **`package-lock.json` is out of sync with `package.json`.** The committed lockfile is missing entries (e.g. several `esbuild` platform packages), so `npm ci` fails with `EUSAGE` ("can only install packages when your package.json and package-lock.json ... are in sync"). Use `npm install` instead, which reconciles the difference. For this reason the CI workflow (§10) runs `npm install`, not `npm ci`. The lockfile could be regenerated (`npm install` then commit the result) in a standalone cleanup if a reproducible `npm ci` is wanted.
+- **`package-lock.json` was regenerated** (PR #4) to include all transitive entries. `npm ci` should now work. CI currently still runs `npm install` for safety; switching to `npm ci` is a low-risk follow-up if desired.
 
 ---
 
@@ -357,7 +357,7 @@ Show a "follows you back" badge next to usernames in similar vibers. Requires a 
 
 1. Checkout (`actions/checkout@v4`)
 2. Node 22 (`actions/setup-node@v4`)
-3. `npm install` — **not `npm ci`**, because the committed lockfile is out of sync (see §9)
+3. `npm install` (could be `npm ci` now that the lockfile is synced — see §9)
 4. `npm run typecheck` (`tsc --noEmit`)
 5. `npm test` (`vitest run` — the full suite)
 
