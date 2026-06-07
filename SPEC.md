@@ -87,9 +87,28 @@ Tracks follow relationships between users.
 Primary key is `(follower_id, followee_id)` — prevents duplicate follows.
 
 **RLS on `follows`:**
-- `SELECT`: own rows only (`auth.uid() = follower_id`)
+- `SELECT`: own rows only (`auth.uid() = follower_id`) **OR** any authenticated user (additive policy — see below)
 - `INSERT`: own rows only
 - `DELETE`: own rows only
+
+> **Additive policy note:** `supabase_social_setup.sql` adds a second, permissive `SELECT` policy — `"follows are viewable by any authenticated user" ... using (true)` — alongside the original. Postgres RLS OR's permissive policies together, so this *opens* visibility (needed for follower/following counts, lists, and mutual-follow badges) without requiring the original policy to be dropped or renamed. This is the general pattern for adding visibility to an RLS table without knowing/risking existing policy names.
+
+### `blocks`
+Tracks block/mute relationships. Lets a user hide another user's content from their own view.
+
+| Column | Type | Notes |
+|---|---|---|
+| `blocker_id` | uuid (PK, FK) | FK → `auth.users.id` |
+| `blocked_id` | uuid (PK, FK) | FK → `auth.users.id` |
+| `created_at` | timestamptz | set by Supabase |
+
+Primary key is `(blocker_id, blocked_id)`.
+
+**RLS on `blocks`:** `SELECT`/`INSERT`/`DELETE` — own rows only (`auth.uid() = blocker_id`). Nobody can see who has blocked them.
+
+> **Known limitation:** Blocking only filters the blocker's *own* view (timeline entries from blocked users are hidden client-side via `blockedIds`). It does **not** prevent a blocked user from still following the blocker — that would require a more invasive RLS rewrite on `follows` (e.g. checking the `blocks` table on `INSERT`), which was deferred as out of scope for an initial mute feature. Documented in `supabase_social_setup.sql`.
+
+Both the `blocks` table and the additive `follows` policy live in **`supabase_social_setup.sql`** at the project root — run it once in the Supabase SQL editor before testing/using the social features (it is not applied via migration tooling).
 
 ---
 
@@ -165,6 +184,7 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 
 ### Mood Table (`src/components/MoodTable.tsx`)
 - Lists all entries for the logged-in user, newest first; each row's `.vibe-dot` uses `gridColor` so it matches the point's color on the grid
+- **Empty state**: when the user has zero entries, shows a large, prominent, fully-centered message (`.table-empty-state` — flexbox-centered both axes, fills the column height) reading "no logs yet / click on the grid to log a mood" — replacing a much smaller, low-contrast one-line note that was easy to miss for new accounts
 - **3-hour edit window**: edit + delete buttons visible for `created_at` within 3 hours; locked indicator (`·`) after that
 - Inline note editing: click edit → input replaces note cell → Enter saves, Escape cancels
 - **Undo delete**: clicking × immediately hides the row and shows a sticky toast ("entry deleted · undo (Xs)") with a 5-second live countdown. The actual Supabase `DELETE` fires only when the timer expires. Clicking undo cancels the timer and restores the row. Multiple simultaneous pending deletes are supported.
@@ -184,11 +204,39 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 
 ### Timeline (`src/components/Timeline.tsx`)
 - Feed of all `public = true` entries from all users
-- Each entry: a `gridColor` dot (matching the grid/table), zone label (in `ZONE_META` color), `@username`, time-ago, optional note (if `note_public = true`). Entries render as translucent dark cards (with a shadow on the meta text) so `@username` · time-ago stay legible over the rainbow page background.
+- Each entry: a `gridColor` dot (matching the grid/table), zone label (in `ZONE_META` color), a clickable `@username` (opens `UserProfileModal`), time-ago, optional note (if `note_public = true`). Entries render as translucent dark cards (with a shadow on the meta text) so `@username` · time-ago stay legible over the rainbow page background.
 - Own entries highlighted subtly
 - **Feed filter**: toggle between "everyone" (all public vibes) and "following (N)" (own entries + followed users' entries)
-- **Cursor-based pagination**: loads 20 entries at a time using `.lt('created_at', cursor)`. A "load more" button appears at the bottom of the everyone feed when more entries exist. Profile lookups are batched per page (only new user IDs fetched, accumulated across pages via `useRef`).
-- **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score and a follow/unfollow button per row. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
+- **Date range filter**: `from`/`to` date inputs (reusing `Analysis.tsx`'s `filter-input`/`filter-label` pattern); a local `inDateRange` helper duplicates `Analysis`'s date-filter logic intentionally (avoids a premature shared abstraction for two small, independently-evolving filters)
+- **Mood/zone filter**: a row of toggleable zone chips (`Set<ZoneId>`); entries are shown only if their `getZone(valence, arousal)` is in the active set. Date and zone filters combine (AND) and stack with the everyone/following toggle. A "clear filters" button appears whenever any filter is active.
+- **Blocked-user filtering**: entries from any `user_id` in `blockedIds` are filtered out of the feed entirely (`entries.filter(e => !blockedIds.has(e.user_id))`), applied before the everyone/following and date/zone filters
+- **User search** (`UserSearchBox`, via `useUserSearch`): debounced (300ms) `ilike` search on `profiles.username`, limit 20, excludes the current user; shows an explicit "no users found" empty state; each result row has a clickable `@username` (opens profile) and a follow/unfollow button
+- **Cursor-based pagination**: loads 20 entries at a time using `.lt('created_at', cursor)`. A "load more" button appears at the bottom of the everyone feed when more entries exist (and no date/zone filter is active — pagination is page-local, see §9). Profile lookups are batched per page (only new user IDs fetched, accumulated across pages via `useRef`).
+- **Similar vibers**: computes 7-dimensional zone distribution vector per user; ranks all other users by Euclidean distance; shows top 5 with a % match score, a clickable `@username` (opens profile), and a follow/unfollow button per row. Requires ≥5 public entries from current user and ≥3 from candidates to appear.
+
+### Profile Views (`src/components/UserProfileModal.tsx` + `src/hooks/useUserProfile.ts`)
+- Opened by clicking any `@username` across the app (timeline cards, similar vibers, search results, settings lists)
+- Shows: `@username`, a "follows you" badge when the relationship is mutual (and it isn't the viewer's own profile), follow/unfollow + block/unblock buttons, follower/following counts, and a feed of that user's public vibes (reusing the `tl-entry`/`tl-dot`/`tl-zone` timeline styling)
+- `useUserProfile` runs 5 Supabase queries in parallel via `Promise.all`: profile lookup, public vibes (limit 50), follower count, following count, and a `.maybeSingle()` mutual-follow check. Requires the additive `follows` SELECT policy (see §3) — without it, counts/lists/badges for other users return empty.
+- If the viewed user is blocked, a `.profile-blocked-note` is shown in place of their vibes feed
+- `handleBlockToggle` unfollows before blocking (a user can't simultaneously follow and block someone)
+
+### Account Settings Modal (`src/components/AccountSettingsModal.tsx` + `src/hooks/useSocialLists.ts`)
+- Opened from the `@username` button in the header (replaces the previous scattered `btn-username`/`btn-setpw`/`btn-signout` header buttons — all account-related actions now live in one place)
+- Tabbed: **account** (username display + edit trigger, email, password status + set-password trigger, sign-out), **following**, **followers**, **blocked**
+- The following/followers tabs use `useSocialLists` (two `follows` queries + a batched `profiles` lookup, mirroring `useTimeline`'s join-in-JS strategy — also requires the additive `follows` policy); the blocked tab does a local `profiles` lookup for IDs in `blockedIds`
+- Each row (`PersonRow`) shows a clickable `@username` (opens profile, closing settings first) and a context-appropriate action button (unfollow / unblock)
+- `onOpenEditUsername`/`onOpenSetPassword` close the settings modal before opening `EditUsernameModal`/`SetPasswordModal` (modals don't stack)
+
+### Block / Mute (`src/hooks/useBlocks.ts`)
+- Mirrors `useFollows` exactly: `blockedIds: Set<string>`, optimistic `block`/`unblock` with error rollback, queries the `blocks` table filtered by `blocker_id = session.user.id`
+- Hides the blocked user's entries from the timeline and (via `UserProfileModal`) their profile's vibe feed
+- See §3 for the documented limitation: blocking doesn't prevent the blocked user from still following the blocker
+
+### Onboarding Hint (`App.tsx`)
+- A modal (`.hint-modal-backdrop`/`.hint-modal`, cream `var(--accent)` background with dark text) explains how to use the grid: "click anywhere on the grid to log your vibe" + an explanation of the valence (left↔right) and arousal (bottom↔top) axes, mirroring the grid's own `← unpleasant · pleasant →` / `↓ low energy · high energy ↑` axis labels
+- Shown whenever the user is on the `log` view with zero logged vibes; dismissing it ("got it" or clicking the backdrop) hides it for the current visit only — navigating away and back to `log` re-shows it (`useEffect` resets `hintDismissed` on `view === 'log'`), so it keeps nudging brand-new users until they log their first vibe, after which the `vibes.length === 0` guard retires it permanently for that account
+- Renders as a true modal (`position: fixed`, `z-index: 100`) rather than an inline overlay — this was a deliberate pivot away from an earlier absolutely-positioned-over-the-header approach, which ran into CSS stacking-context conflicts with the grid's own positioned/z-indexed elements (`.vibe-point`, `.vibe-tip`, etc. at z-index 10–40)
 
 ### Dynamic Vibe Accent (`src/lib/accent.ts` + `src/hooks/useAccent.ts`)
 - The site's accent color (buttons, focus rings, active tabs, glows, own-entry tints) is dynamic. Before any vibe is logged this session — including the auth screen — it is a neutral **cream/charcoal** scheme.
@@ -213,8 +261,8 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 - `PublicShareView`: rendered by `App.tsx` when `?share=` is detected in the URL (checked before auth). Decodes the token and renders the share card. Falls back to an error message for malformed tokens. Includes a CTA link back to the app.
 
 ### Username Editing (`src/components/EditUsernameModal.tsx` + `src/hooks/useProfile.ts`)
-- Header shows `@username` as a clickable button (only when username is loaded)
-- Clicking opens `EditUsernameModal`: text input pre-filled with current username, validates non-empty / max 30 chars / alphanumeric+underscore only
+- Header shows `@username` as a clickable button (only when username is loaded); clicking it now opens **`AccountSettingsModal`** (see above) rather than `EditUsernameModal` directly — the settings modal's account tab triggers `EditUsernameModal` from there
+- `EditUsernameModal` itself is unchanged: text input pre-filled with current username, validates non-empty / max 30 chars / alphanumeric+underscore only
 - `useProfile` hook fetches username from `profiles` on mount and exposes `updateUsername` which writes to Supabase and updates local state
 - Username defaults to email prefix (set by signup trigger); modal allows changing it to any valid handle
 
@@ -231,7 +279,10 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 All data isolation is enforced at the Postgres RLS layer, not in application code. The frontend uses the anon key only — no service role key is ever exposed. Client-side checks (e.g. hiding edit buttons after 3 hours) are UX, not security.
 
 ### Optimistic updates
-`useVibes` applies mutations locally before the Supabase round-trip completes. On error the optimistic update is not rolled back (known gap — low stakes for a personal tool). `useFollows` does roll back optimistic follow/unfollow on error.
+`useVibes` applies mutations locally before the Supabase round-trip completes. On error the optimistic update is not rolled back (known gap — low stakes for a personal tool). `useFollows` does roll back optimistic follow/unfollow on error, and `useBlocks` was written as a near-exact mirror of `useFollows` (same `Set<string>` + optimistic-with-rollback shape) — when one needs a fix, check whether the other does too.
+
+### Additive RLS policies for incremental visibility
+Postgres RLS OR's permissive policies of the same type together. `supabase_social_setup.sql` exploits this to widen `follows` SELECT visibility (originally "own rows only") to "any authenticated user" via a *second*, separately-named policy — without needing to know or drop the original policy's name. This is the preferred pattern whenever a new feature needs broader read access to an existing RLS-protected table: add a policy, don't risk replacing one.
 
 ### Timeline data fetching strategy
 Timeline uses two sequential queries (vibes → profiles for unique user IDs) joined in JS, rather than a PostgREST relationship join. This sidesteps the FK chain (`vibes.user_id → auth.users → profiles`) which PostgREST can't traverse automatically without explicit FK declarations.
@@ -252,25 +303,31 @@ All undo logic lives in `MoodTable` — no changes to `useVibes`. A `pendingDele
 ```
 src/
   components/
+    AccountSettingsModal.tsx tabbed account/following/followers/blocked modal (replaces header buttons)
     Auth.tsx              magic link + password auth UI
     Analysis.tsx          full analysis panel (filter, export, trend, tod, heatmap, etc.)
     EditUsernameModal.tsx username edit modal (validation + Supabase write)
     MoodGrid.tsx          the clickable 2D grid with zones/dots/overlays
     MoodModal.tsx         post-click entry modal (note + privacy toggles)
-    MoodTable.tsx         entries list with inline edit, undo delete, share, 3hr lock
+    MoodTable.tsx         entries list with inline edit, undo delete, share, 3hr lock, empty state
     PublicShareView.tsx   auth-free card view for ?share= URLs
     SetPasswordModal.tsx  upgrade magic-link account to password auth
     ShareModal.tsx        share modal — card preview + copy-link button
-    Timeline.tsx          global feed, following filter, similar vibers + follow buttons
+    Timeline.tsx          global feed, search, date/zone filters, similar vibers, profile links
+    UserProfileModal.tsx  per-user profile view: stats, follow/block, public vibes feed
   hooks/
     useVibes.ts           CRUD for current user's entries (optimistic)
     useTimeline.ts        fetches public entries + profiles; cursor-based pagination
     useFollows.ts         follow/unfollow state with optimistic updates + error revert
+    useBlocks.ts          block/unblock state, mirrors useFollows (optimistic + revert)
     useProfile.ts         fetch + update username from profiles table
+    useUserSearch.ts      debounced username search (ilike on profiles)
+    useUserProfile.ts     per-user profile data: vibes, follower/following counts, mutual badge
+    useSocialLists.ts     current user's followers + following as Profile[] lists
     useAccent.ts          dynamic UI accent: cream default → most-recent-vibe zone color
   lib/
     accent.ts             accent palette computation + apply to :root CSS vars
-    database.types.ts     Supabase schema types (vibes, profiles, follows)
+    database.types.ts     Supabase schema types (vibes, profiles, follows, blocks)
     supabase.ts           Supabase client init (plain, non-generic — see §2)
     vibeColor.ts          HSL color encoding from (valence, arousal)
     wordAnalysis.ts       stop-word filtering + top-N word frequency
@@ -294,6 +351,7 @@ public/
 index.html                PWA meta tags + Google Fonts link
 vite.config.js            base: '/', vitest config (jsdom environment)
 tsconfig.json             strict mode, bundler moduleResolution, react-jsx
+supabase_social_setup.sql one-time SQL: blocks table/RLS + additive follows SELECT policy (run manually in SQL editor — see §3)
 CLAUDE_IDEAS.md           ideas log (implemented + proposed)
 SPEC.md                   this file
 ```
@@ -320,6 +378,14 @@ Items are loosely ordered by effort/value. Nothing here is committed — all are
 - ✓ **Shareable vibe card** — `↗` on public entries opens share modal; "copy link" produces a `?share=<token>` URL with base64-encoded vibe data. `PublicShareView` renders the card without auth for any share URL.
 - ✓ **Dynamic vibe accent** — UI accent defaults to cream/charcoal and recolors to the most recently logged vibe's zone color; session-scoped (resets to cream on sign-out). See `src/lib/accent.ts`.
 - ✓ **PWA service worker** — `public/sw.js`: cache-first for `/assets/` (Vite content-hashed bundles), network-first for navigation, pass-through for Supabase. Registered in `main.tsx`.
+- ✓ **User search** — debounced username search (`useUserSearch`) surfaced in the timeline; explicit empty-state for zero results
+- ✓ **Profile views** — `UserProfileModal` + `useUserProfile`: stats, public vibe feed, follow/block actions; opened from any clickable `@username` across the app
+- ✓ **Account settings modal** — `AccountSettingsModal` consolidates username/password/sign-out/following/followers/blocked into one tabbed modal, replacing scattered header buttons
+- ✓ **Timeline filters by date and mood** — `from`/`to` date-range inputs + toggleable zone/mood chips, combinable with the everyone/following feed filter
+- ✓ **Mutual follows / follow-back indicator** — "follows you" badge shown on `UserProfileModal` when the relationship is mutual (requires the additive `follows` SELECT policy in `supabase_social_setup.sql`)
+- ✓ **Block / mute** — `blocks` table + `useBlocks` (mirrors `useFollows`); hides a blocked user's entries from the timeline and their profile's vibe feed. Documented limitation: doesn't prevent the blocked user from still following the blocker (see §3, §9)
+- ✓ **New-user onboarding hint** — modal explaining how to use the grid (axes + click-to-log), shown each visit to the `log` view until the user logs their first vibe
+- ✓ **Improved empty states** — large, centered "no logs yet" messaging in `MoodTable` for zero-entry accounts
 
 ### Longer-term / speculative
 
@@ -332,9 +398,6 @@ An opt-in toggle that shows a blurred heatmap of all users' activity for today. 
 **Custom zone labels**  
 Per-user rename of the seven zone labels, stored in a `zone_labels` column on `profiles`. The existing names are central to the app's personality, so this would probably be a power-user feature.
 
-**Mutual follows / follow-back indicator**  
-Show a "follows you back" badge next to usernames in similar vibers. Requires a second query or join on the `follows` table.
-
 ---
 
 ## 9. Known Gaps & Gotchas
@@ -344,7 +407,9 @@ Show a "follows you back" badge next to usernames in similar vibers. Requires a 
 - **The 3-hour lock constant exists in two places**: `MoodTable.tsx` (client) and the Supabase RLS policy (server). They must stay in sync.
 - **No error boundary.** An uncaught render error will crash the whole app.
 - **Similar vibers uses all-time data.** The zone distribution vectors are computed from a user's full public history, not a recent window. Could be noisy for users whose mood patterns have shifted.
-- **Timeline pagination only applies to the "everyone" feed.** The "following" filter is applied client-side over already-loaded entries, so it only covers the pages fetched so far.
+- **Timeline pagination is page-local for every client-side filter** — "following", and now also the date-range and mood/zone filters, are all applied over already-loaded pages, not the full dataset. The "load more" button is hidden whenever any of these filters is active, since loading more wouldn't reliably surface matching older entries.
+- **Blocking doesn't prevent the blocked user from following you.** `useBlocks` only filters what *you* see (their entries vanish from your timeline and profile view); it can't stop them from adding you via `follows`. A real fix would need an RLS check on `follows` INSERT against the `blocks` table — deferred as riskier than the initial mute scope warranted. See §3.
+- **`useVibes` previously had a cross-account data leak**: `fetchVibes` queried `vibes` with no `user_id` filter, relying solely on RLS (`auth.uid() = user_id OR public = true`) — this meant the personal grid/table/analysis views showed the current user's own vibes *plus* every other user's public vibes, rendered as if they were the viewer's own. Fixed by adding an explicit `.eq('user_id', session.user.id)`. (Latent since the personal views were introduced; only surfaced once a second account with public entries existed to test against.)
 - **Share links encode vibe data client-side** — they are not validated against the DB when viewed. A share link for a private-later-made vibe will still show the original data.
 - **PWA is not offline-capable for data.** Static assets are cached; Supabase API calls are always network-only. The app requires connectivity to log or fetch vibes.
 - **`package-lock.json` was regenerated** (PR #4) to include all transitive entries. `npm ci` should now work. CI currently still runs `npm install` for safety; switching to `npm ci` is a low-risk follow-up if desired.
