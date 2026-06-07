@@ -46,14 +46,19 @@ const ZONES: Zone[] = [
 // Zone labels — cx/cy = anchor of zone. Layout matches the reference mockup:
 // big bold blocks, a diagonal "we are so fucking back", a rotated "what it is".
 const LABELS: Label[] = [
-  { text: 'fuck it\nwe ball',         cx: '21%', cy: '21%', sz: 40, fw: 900, align: 'center' },
-  { text: 'we are so\nfucking back',  cx: '66%', cy: '30%', sz: 34, fw: 900, align: 'center', rotate: 34 },
-  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%', cy: '9%',  sz: 11, fw: 700, align: 'center' },
-  { text: 'it is',                    cx: '30%', cy: '52%', sz: 30, fw: 900, align: 'center' },
-  { text: 'what\nit is',              cx: '49%', cy: '56%', sz: 30, fw: 900, align: 'center', rotate: -68 },
-  { text: "it's so\nover",            cx: '21%', cy: '79%', sz: 36, fw: 900, align: 'center' },
-  { text: 'we\nvibing',               cx: '78%', cy: '80%', sz: 36, fw: 900, align: 'center' },
-  { text: 'log off\nforever',         cx: '7.5%', cy: '93%', sz: 10, fw: 700, align: 'center' },
+  { text: 'fuck it\nwe ball',         cx: '21%',   cy: '21%', sz: 40, fw: 900, align: 'center' },
+  { text: 'we are so\nfucking back',  cx: '66%',   cy: '30%', sz: 42, fw: 900, align: 'center', rotate: 34 },
+  { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%',   cy: '9%',  sz: 18, fw: 700, align: 'center' },
+  // "it is what it is" flows around the bend:
+  // "it is" anchors the horizontal band
+  { text: 'it is',                    cx: '25%',   cy: '52%', sz: 30, fw: 900, align: 'center' },
+  // "what" sits diagonally at the corner where band meets column
+  { text: 'what',                     cx: '49.5%', cy: '63%', sz: 26, fw: 900, align: 'center', rotate: -45 },
+  // "it is" stacks word-per-line in the narrow vertical column
+  { text: 'it\nis',                   cx: '49.5%', cy: '82%', sz: 26, fw: 900, align: 'center' },
+  { text: "it's so\nover",            cx: '21%',   cy: '79%', sz: 36, fw: 900, align: 'center' },
+  { text: 'we\nvibing',               cx: '78%',   cy: '80%', sz: 36, fw: 900, align: 'center' },
+  { text: 'log off\nforever',         cx: '7.5%',  cy: '93%', sz: 16, fw: 700, align: 'center' },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
@@ -222,7 +227,7 @@ export default function MoodGrid({
 
           {/* Background zones — clean rectangles using left/top/right/bottom */}
           {ZONES.map((z, i) => (
-            <div key={i} style={{
+            <div key={i} className="zone-bg" style={{
               position: 'absolute',
               left:   `${z.x1}%`,
               top:    `${z.y1}%`,

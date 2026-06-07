@@ -1,5 +1,4 @@
-import { ZONE_META } from '../lib/zones'
-import { vibeColor } from '../lib/vibeColor'
+import { ZONE_META, gridColor } from '../lib/zones'
 import type { SharePayload } from './ShareModal'
 
 interface Props {
@@ -24,7 +23,7 @@ export default function PublicShareView({ token }: Props) {
   }
 
   const meta  = ZONE_META[payload.z as keyof typeof ZONE_META] ?? ZONE_META['whatitis']
-  const color = vibeColor(payload.v, payload.a)
+  const color = gridColor(payload.v, payload.a)
   const date  = new Date(payload.t).toLocaleDateString(undefined, {
     year: 'numeric', month: 'short', day: 'numeric',
   })
