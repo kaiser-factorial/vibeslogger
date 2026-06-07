@@ -33,6 +33,7 @@ export default function useVibes(session: Session | null): UseVibesReturn {
     const { data, error } = await supabase
       .from('vibes')
       .select('*')
+      .eq('user_id', session!.user.id)
       .order('created_at', { ascending: false }) as { data: Vibe[] | null; error: unknown }
     if (!error && data) setVibes(data)
     setLoading(false)

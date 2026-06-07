@@ -86,7 +86,10 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
   const displayedVibes = vibes.filter(v => !pendingDeletes.has(v.id))
 
   if (displayedVibes.length === 0 && pendingDeletes.size === 0) return (
-    <div className="table-empty">no vibes logged yet</div>
+    <div className="table-empty-state">
+      <div className="table-empty-title">no logs yet</div>
+      <div className="table-empty-sub">click on the grid to log a mood</div>
+    </div>
   )
 
   return (

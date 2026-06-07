@@ -9,9 +9,12 @@ import Analysis from './components/Analysis'
 import Timeline from './components/Timeline'
 import SetPasswordModal from './components/SetPasswordModal'
 import EditUsernameModal from './components/EditUsernameModal'
+import AccountSettingsModal from './components/AccountSettingsModal'
+import UserProfileModal from './components/UserProfileModal'
 import PublicShareView from './components/PublicShareView'
 import useVibes from './hooks/useVibes'
 import useFollows from './hooks/useFollows'
+import useBlocks from './hooks/useBlocks'
 import useProfile from './hooks/useProfile'
 import useAccent from './hooks/useAccent'
 import type { PendingVibe } from './types'
@@ -29,12 +32,16 @@ export default function App() {
   const [pendingVibe,     setPendingVibe]     = useState<PendingVibe | null>(null)
   const [settingPassword,  setSettingPassword]  = useState(false)
   const [editingUsername,  setEditingUsername]  = useState(false)
+  const [showSettings,     setShowSettings]     = useState(false)
+  const [viewingProfileId, setViewingProfileId] = useState<string | null>(null)
+  const [hintDismissed,   setHintDismissed]   = useState(false)
   const [showLabels,      setShowLabels]      = useState(true)
   const [showEmotions,    setShowEmotions]    = useState(false)
   const [exploreMode,     setExploreMode]     = useState(false)
 
   const { vibes, loading, addVibe, updateVibe, deleteVibe } = useVibes(session)
   const { followingIds, follow, unfollow } = useFollows(session)
+  const { blockedIds, block, unblock } = useBlocks(session)
   const { username, updateUsername } = useProfile(session)
   const { setAccentFromVibe } = useAccent(session)
 
@@ -55,6 +62,14 @@ export default function App() {
       localStorage.setItem('vl-has-vibes', 'true')
     }
   }, [vibes])
+
+  useEffect(() => {
+    if (view === 'log') setHintDismissed(false)
+  }, [view])
+
+  function dismissHint() {
+    setHintDismissed(true)
+  }
 
   function handleGridClick(x: number, y: number) {
     setPendingVibe({ x, y })
@@ -89,18 +104,10 @@ export default function App() {
           </div>
           <div className="header-actions">
             {username && (
-              <button className="btn-username" onClick={() => setEditingUsername(true)}>
+              <button className="btn-username" onClick={() => setShowSettings(true)}>
                 @{username}
               </button>
             )}
-            {!session.user.user_metadata?.has_password && (
-              <button className="btn-setpw" onClick={() => setSettingPassword(true)}>
-                set password
-              </button>
-            )}
-            <button className="btn-signout" onClick={() => supabase.auth.signOut()}>
-              sign out
-            </button>
           </div>
         </div>
         <nav className="app-nav">
@@ -158,14 +165,45 @@ export default function App() {
         ) : (
           <div className="panel-analysis">
             <Timeline
-            session={session}
-            followingIds={followingIds}
-            follow={follow}
-            unfollow={unfollow}
-          />
+              session={session}
+              followingIds={followingIds}
+              blockedIds={blockedIds}
+              follow={follow}
+              unfollow={unfollow}
+              onOpenProfile={setViewingProfileId}
+            />
           </div>
         )}
       </main>
+
+      {showSettings && (
+        <AccountSettingsModal
+          session={session}
+          username={username}
+          followingIds={followingIds}
+          blockedIds={blockedIds}
+          unfollow={unfollow}
+          unblock={unblock}
+          onOpenProfile={setViewingProfileId}
+          onOpenEditUsername={() => { setShowSettings(false); setEditingUsername(true) }}
+          onOpenSetPassword={() => { setShowSettings(false); setSettingPassword(true) }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
+
+      {viewingProfileId && (
+        <UserProfileModal
+          userId={viewingProfileId}
+          session={session}
+          followingIds={followingIds}
+          blockedIds={blockedIds}
+          follow={follow}
+          unfollow={unfollow}
+          block={block}
+          unblock={unblock}
+          onClose={() => setViewingProfileId(null)}
+        />
+      )}
 
       {settingPassword && (
         <SetPasswordModal onClose={() => setSettingPassword(false)} />
@@ -177,6 +215,18 @@ export default function App() {
           onSave={updateUsername}
           onClose={() => setEditingUsername(false)}
         />
+      )}
+
+      {view === 'log' && !loading && vibes.length === 0 && !hintDismissed && (
+        <div className="hint-modal-backdrop" onClick={dismissHint}>
+          <div className="hint-modal" onClick={e => e.stopPropagation()}>
+            <div className="hint-modal-text">
+              <div className="hint-modal-headline">click anywhere on the grid to log your vibe</div>
+              <div className="hint-modal-detail">left to right is unpleasant to pleasant (valence), bottom to top is low to high energy (arousal)</div>
+            </div>
+            <button className="hint-modal-dismiss" onClick={dismissHint}>got it</button>
+          </div>
+        </div>
       )}
 
       {pendingVibe && (

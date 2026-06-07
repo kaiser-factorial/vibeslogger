@@ -9,7 +9,7 @@ interface Zone {
 
 interface Label {
   text: string; cx: string; cy: string; sz: number; fw: number
-  rotate?: number; align?: 'left' | 'center'; color?: string
+  rotate?: number; align?: 'left' | 'center'; color?: string; lineHeight?: number
 }
 
 interface Emotion {
@@ -47,18 +47,18 @@ const ZONES: Zone[] = [
 // big bold blocks, a diagonal "we are so fucking back", a rotated "what it is".
 const LABELS: Label[] = [
   { text: 'fuck it\nwe ball',         cx: '21%',   cy: '21%', sz: 40, fw: 900, align: 'center' },
-  { text: 'we are so\nfucking back',  cx: '66%',   cy: '30%', sz: 42, fw: 900, align: 'center', rotate: 34 },
+  { text: 'we are so\nfucking back',  cx: '70%',   cy: '30%', sz: 45, fw: 900, align: 'center', rotate: 34 },
   { text: 'LETS FUCKING\nGOOOOOOOO', cx: '89%',   cy: '9%',  sz: 18, fw: 700, align: 'center' },
   // "it is what it is" flows around the bend:
   // "it is" anchors the horizontal band
-  { text: 'it is',                    cx: '25%',   cy: '52%', sz: 30, fw: 900, align: 'center' },
+  { text: 'it     is', cx: '31.5%', cy: '52%', sz: 43, fw: 900, align: 'center' },
   // "what" sits diagonally at the corner where band meets column
-  { text: 'what',                     cx: '49.5%', cy: '63%', sz: 26, fw: 900, align: 'center', rotate: -45 },
+  { text: 'what',                     cx: '49%', cy: '54%', sz: 43, fw: 900, align: 'center', rotate: 45 },
   // "it is" stacks word-per-line in the narrow vertical column
-  { text: 'it\nis',                   cx: '49.5%', cy: '82%', sz: 26, fw: 900, align: 'center' },
+  { text: 'it\nis', cx: '49.5%', cy: '79.5%', sz: 43, fw: 900, align: 'center', lineHeight: 1.5 },
   { text: "it's so\nover",            cx: '21%',   cy: '79%', sz: 36, fw: 900, align: 'center' },
   { text: 'we\nvibing',               cx: '78%',   cy: '80%', sz: 36, fw: 900, align: 'center' },
-  { text: 'log off\nforever',         cx: '7.5%',  cy: '93%', sz: 16, fw: 700, align: 'center' },
+  { text: 'log off\nforever',         cx: '7.5%',  cy: '94%', sz: 16, fw: 700, align: 'center' },
 ]
 
 // Emotion wheel — standard Russell Circumplex affect labels
@@ -253,7 +253,7 @@ export default function MoodGrid({
               fontSize: l.sz * labelScale,
               fontWeight: l.fw,
               color: l.color ?? '#141414',
-              lineHeight: 1.02,
+              lineHeight: l.lineHeight ?? 1.02,
               whiteSpace: 'pre-line',
               textAlign: l.align ?? 'center',
               letterSpacing: '-0.01em',

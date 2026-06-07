@@ -22,3 +22,9 @@ export interface PendingVibe {
   x: number
   y: number
 }
+
+/** One row from the `profiles` table — id + display username. */
+export interface Profile {
+  id: string
+  username: string
+}
