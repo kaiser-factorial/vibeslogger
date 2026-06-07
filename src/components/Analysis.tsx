@@ -89,7 +89,7 @@ function exportJSON(vibes: Vibe[]) {
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `vibeslogger-${new Date().toISOString().split('T')[0]}.json`
+  a.download = `vibelogger-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -113,7 +113,7 @@ function exportCSV(vibes: Vibe[]) {
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `vibeslogger-${new Date().toISOString().split('T')[0]}.csv`
+  a.download = `vibelogger-${new Date().toISOString().split('T')[0]}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }

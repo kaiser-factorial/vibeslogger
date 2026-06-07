@@ -1,4 +1,4 @@
-# vibeslogger
+# vibelogger
 
 mood tracking on the russell circumplex model (valence × arousal), with auth so multiple people can use it.
 

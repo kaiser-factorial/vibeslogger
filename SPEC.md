@@ -1,14 +1,14 @@
-# vibeslogger — Project Specification
+# vibelogger — Project Specification
 
 **Status:** active development  
 **Stack:** Vite + React 18 + TypeScript · Supabase (Postgres + Auth) · Vercel  
-**Repo:** `github.com/kaiser-factorial/vibeslogger` (auto-deploys `master` → Vercel)
+**Repo:** `github.com/kaiser-factorial/vibelogger` (auto-deploys `master` → Vercel)
 
 ---
 
 ## 1. Concept
 
-Vibeslogger is a mood-tracking web app grounded in the **Russell Circumplex Model of Affect** — a 2D psychological model that maps emotional states along two continuous axes:
+Vibelogger is a mood-tracking web app grounded in the **Russell Circumplex Model of Affect** — a 2D psychological model that maps emotional states along two continuous axes:
 
 - **Valence** (x-axis, 1–10): unpleasant → pleasant
 - **Arousal** (y-axis, 1–10): low energy → high energy

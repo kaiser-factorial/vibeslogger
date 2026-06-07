@@ -51,7 +51,7 @@ export default function Auth() {
 
   if (sent) return (
     <div className="auth-wrap">
-      <h1>vibeslogger</h1>
+      <h1>vibelogger</h1>
       <p>check your email — magic link sent to <strong>{email}</strong></p>
       <button className="btn-ghost" onClick={() => setSent(false)}>use a different email</button>
     </div>
@@ -59,7 +59,7 @@ export default function Auth() {
 
   return (
     <div className="auth-wrap">
-      <h1>vibeslogger</h1>
+      <h1>vibelogger</h1>
       <p className="auth-sub">log your position on the vibe spectrum</p>
 
       <div className="auth-modes">

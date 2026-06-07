@@ -1,6 +1,6 @@
 {
-  "name": "vibeslogger",
-  "short_name": "vibeslogger",
+  "name": "vibelogger",
+  "short_name": "vibelogger",
   "description": "track your position on the vibe spectrum",
   "start_url": "/",
   "display": "standalone",

@@ -17,7 +17,7 @@ export default function PublicShareView({ token }: Props) {
     return (
       <div className="share-view">
         <div className="share-view-error">invalid share link</div>
-        <a className="share-view-cta" href="/">open vibeslogger</a>
+        <a className="share-view-cta" href="/">open vibelogger</a>
       </div>
     )
   }
@@ -40,7 +40,7 @@ export default function PublicShareView({ token }: Props) {
           <div className="share-view-note">"{payload.n}"</div>
         )}
         <div className="share-view-date">{date}</div>
-        <div className="share-card-brand">vibeslogger</div>
+        <div className="share-card-brand">vibelogger</div>
       </div>
       <a className="share-view-cta" href="/">log your own vibes</a>
     </div>

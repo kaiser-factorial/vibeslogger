@@ -143,7 +143,9 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
                     ) : (
                       <div className="row-actions">
                         {v.public && (
-                          <button className="btn-share" onClick={() => setSharingVibe(v)}
+                          <button className="btn-share"
+                            style={{ color: gridColor(v.valence, v.arousal) }}
+                            onClick={() => setSharingVibe(v)}
                             title="share">↗</button>
                         )}
                         {locked ? (

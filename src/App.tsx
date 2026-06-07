@@ -82,7 +82,7 @@ export default function App() {
       <header className="app-header">
         <div className="app-header-top">
           <div className="app-title-group">
-            <h1 className="app-title">vibeslogger</h1>
+            <h1 className="app-title">vibelogger</h1>
             {view === 'log' && !expanded && (
               <p className="app-subtitle">click to log a vibe</p>
             )}

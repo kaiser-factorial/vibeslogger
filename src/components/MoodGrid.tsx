@@ -106,8 +106,10 @@ function fmtStamp(ts: string): string {
 
 // ── Sun / moon glyphs — drawn in currentColor so the parent .vibe-point can
 // animate them from white (default) to the zone color (explore mode) ─────────
-function SunGlyph({ size }: { size: number }) {
+function SunGlyph({ size, vivid }: { size: number; vivid?: boolean }) {
   const r = size / 2
+  const fillOp   = vivid ? 0.95 : 0.28
+  const strokeOp = vivid ? 1    : 0.55
   const rays = Array.from({ length: 8 }, (_, i) => {
     const a = (i * Math.PI) / 4
     const x1 = r + Math.cos(a) * (r * 0.62)
@@ -119,21 +121,24 @@ function SunGlyph({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}
       style={{ display: 'block' }}
-      stroke="currentColor" strokeOpacity={0.55} strokeWidth={1.4} strokeLinecap="round">
-      <circle cx={r} cy={r} r={r * 0.42} fill="currentColor" fillOpacity={0.28}
-        stroke="currentColor" strokeOpacity={0.55} strokeWidth={1.4} />
+      stroke="currentColor" strokeOpacity={strokeOp} strokeWidth={1.4} strokeLinecap="round">
+      <circle cx={r} cy={r} r={r * 0.42} fill="currentColor" fillOpacity={fillOp}
+        stroke="currentColor" strokeOpacity={strokeOp} strokeWidth={1.4} />
       {rays}
     </svg>
   )
 }
 
-function MoonGlyph({ size }: { size: number }) {
+function MoonGlyph({ size, vivid }: { size: number; vivid?: boolean }) {
   const maskId = useRef(`moon-${Math.random().toString(36).slice(2, 7)}`).current
   const r = size / 2
   const R = r * 0.78
   const cutCx = r + R * 0.42
   const cutCy = r - R * 0.10
   const cutR  = R * 0.82
+  const fillOp    = vivid ? 0.95 : 0.28
+  const strokeOp  = vivid ? 1    : 0.55
+  const cutOp     = vivid ? 0.4  : 0.18
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
       <defs>
@@ -143,14 +148,14 @@ function MoonGlyph({ size }: { size: number }) {
         </mask>
       </defs>
       <circle cx={r} cy={r} r={R}
-        fill="currentColor" fillOpacity={0.28}
-        stroke="currentColor" strokeOpacity={0.55}
+        fill="currentColor" fillOpacity={fillOp}
+        stroke="currentColor" strokeOpacity={strokeOp}
         strokeWidth={1.2}
         mask={`url(#${maskId})`}
       />
       <circle cx={cutCx} cy={cutCy} r={cutR}
         fill="none"
-        stroke="currentColor" strokeOpacity={0.18}
+        stroke="currentColor" strokeOpacity={cutOp}
         strokeWidth={1.0}
         mask={`url(#${maskId})`}
       />
@@ -302,7 +307,9 @@ export default function MoodGrid({
                 }}
                 aria-label={day ? 'logged during the day' : 'logged at night'}
               >
-                {day ? <SunGlyph size={dotSize} /> : <MoonGlyph size={dotSize} />}
+                {day
+                  ? <SunGlyph size={dotSize} vivid={exploreMode} />
+                  : <MoonGlyph size={dotSize} vivid={exploreMode} />}
 
                 {exploreMode && (
                   <div className={`vibe-tip ${flip ? 'vibe-tip--left' : ''}`}>

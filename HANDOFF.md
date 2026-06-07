@@ -1,4 +1,4 @@
-# vibeslogger — handoff document
+# vibelogger — handoff document
 
 Mood tracker using the **Russell Circumplex Model of Affect**: a 2D grid where
 x = valence (unpleasant → pleasant) and y = arousal (low energy → high energy).
@@ -21,7 +21,7 @@ Multi-user via Supabase auth; everyone's data is private.
 ## project structure
 
 ```
-vibeslogger/
+vibelogger/
 ├── src/
 │   ├── App.jsx                 # root: auth state, layout mode, modal gate
 │   ├── main.jsx                # React DOM entry
@@ -136,7 +136,7 @@ the service role key. RLS enforces data isolation.
 5. Push to `main` — deploys automatically
 
 > `vite.config.js` sets `base: '/'` — correct for Vercel. If you ever move
-> to GitHub Pages under a sub-path (e.g. `/vibeslogger/`), update accordingly.
+> to GitHub Pages under a sub-path (e.g. `/vibelogger/`), update accordingly.
 
 ---
 

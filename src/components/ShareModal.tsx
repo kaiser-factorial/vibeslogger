@@ -60,7 +60,7 @@ export default function ShareModal({ vibe, onClose }: Props) {
             <div className="share-card-note">"{vibe.note}"</div>
           )}
           <div className="share-card-date">{date}</div>
-          <div className="share-card-brand">vibeslogger</div>
+          <div className="share-card-brand">vibelogger</div>
         </div>
 
         <div className="modal-actions">
