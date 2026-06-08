@@ -8,6 +8,7 @@ interface Props {
 }
 
 export interface SharePayload {
+  id?: string  // present on links generated after DB re-validation was added; older links omit it
   z: string
   v: number
   a: number
@@ -17,6 +18,7 @@ export interface SharePayload {
 
 export function encodeShare(vibe: Vibe): string {
   const payload: SharePayload = {
+    id: vibe.id,
     z: getZone(vibe.valence, vibe.arousal),
     v: vibe.valence,
     a: vibe.arousal,

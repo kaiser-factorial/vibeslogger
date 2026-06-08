@@ -438,6 +438,14 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .header-actions { display: flex; align-items: center; gap: 8px; }
 
+.streak-badge {
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 11px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  white-space: nowrap; user-select: none;
+}
+
 /* Header action buttons sit on the colorful page background, so they get a
    translucent dark pill + border + shadow to stay legible. */
 .btn-signout, .btn-setpw, .btn-username {
@@ -471,6 +479,14 @@ button { -webkit-tap-highlight-color: transparent; }
 
 /* ── Misc ── */
 .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 13px; }
+
+/* ── Error boundary ── */
+.error-boundary {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; height: 100vh; padding: 24px; text-align: center;
+}
+.error-boundary-title { font-size: 18px; font-weight: 700; color: var(--fg-mid); }
+.error-boundary-sub   { font-size: 13px; color: var(--muted); max-width: 360px; }
 
 /* ── Vibe dot (table) ── */
 .vibe-dot {
@@ -672,6 +688,9 @@ button { -webkit-tap-highlight-color: transparent; }
 /* ── Modal word hint ── */
 .modal-word-hint {
   font-size: 10px; color: var(--fg-quiet-2); margin-top: 6px;
+}
+.modal-error {
+  font-size: 11px; color: var(--danger); margin-top: 6px;
 }
 
 /* ── Modal privacy toggles ── */

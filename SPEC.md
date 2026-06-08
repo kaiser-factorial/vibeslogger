@@ -106,9 +106,9 @@ Primary key is `(blocker_id, blocked_id)`.
 
 **RLS on `blocks`:** `SELECT`/`INSERT`/`DELETE` — own rows only (`auth.uid() = blocker_id`). Nobody can see who has blocked them.
 
-> **Known limitation:** Blocking only filters the blocker's *own* view (timeline entries from blocked users are hidden client-side via `blockedIds`). It does **not** prevent a blocked user from still following the blocker — that would require a more invasive RLS rewrite on `follows` (e.g. checking the `blocks` table on `INSERT`), which was deferred as out of scope for an initial mute feature. Documented in `supabase_social_setup.sql`.
+> **Resolved:** Blocking now also prevents the blocked user from following (or continuing to follow) the blocker — see `supabase_block_follow_fix.sql`: a *restrictive* `INSERT` policy on `follows` blocks new follow attempts from someone you've blocked (AND-combines with the existing permissive check, mirroring the additive-OR pattern used for the `follows` SELECT policy but for narrowing instead of widening), plus an `AFTER INSERT` trigger on `blocks` that retroactively deletes any existing reverse-follow at the moment of blocking.
 
-Both the `blocks` table and the additive `follows` policy live in **`supabase_social_setup.sql`** at the project root — run it once in the Supabase SQL editor before testing/using the social features (it is not applied via migration tooling).
+Both the `blocks` table and the additive `follows` SELECT policy live in **`supabase_social_setup.sql`**, and the block/follow interaction fix lives in **`supabase_block_follow_fix.sql`** — run both once, in order, in the Supabase SQL editor before testing/using the social features (neither is applied via migration tooling).
 
 ---
 
@@ -195,12 +195,15 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 - **Locked until 10 entries** (total, not date-filtered) — progress bar shown
 - **Date filter**: from/to inputs filter all sections below
 - **Export CSV/JSON**: "↓ csv" and "↓ json" buttons — download the current filtered slice. Disabled when filtered set is empty. CSV headers: date, time, valence, arousal, zone, note. JSON includes all Vibe fields plus computed zone.
-- **Stats strip**: entry count, avg valence, avg arousal, note count (≥3 words), current streak, best streak. Streak is computed from all-time data (ignores the date filter).
+- **Stats strip**: entry count, avg valence, avg arousal, note count (≥3 words), current streak, best streak. Both streak values come from the `get_streak_stats` Supabase RPC (see §7 / `useStreaks.ts`); computed all-time (ignores the date filter), using the browser's local timezone so day boundaries match the user's midnight.
 - **Trend line**: daily-average valence and arousal sparklines with dashed least-squares regression overlays and ↑↓→ direction arrows. Appears when ≥2 calendar days of data exist in the filtered window.
 - **Time-of-day analysis**: 4-slot grid (morning 6–11, afternoon 12–16, evening 17–20, night 21–5) showing entry count and avg valence/arousal per slot. Each slot's border is tinted by the dominant zone color.
 - **Heatmap**: 10×10 grid colored by entry density
 - **Zone breakdown**: horizontal bar chart sorted by frequency
 - **Word analysis**: top 5 words per zone, stop-words filtered, only notes with ≥3 words counted
+
+### Streak Badge (header)
+A small pill in the top-right header (`header-actions`, before the `@username` button) showing the user's current daily streak. Displays as `Nd streak`; when the all-time best is longer than the current run, appends ` · best: Nd`. Hidden when streak is 0. Refreshes on mount, after a successful vibe add, and after a delete (since deleting the only log for a day can break a streak). Both values (`current_streak`, `longest_streak`) are returned in one call to the `get_streak_stats` Supabase RPC (`src/hooks/useStreaks.ts`).
 
 ### Timeline (`src/components/Timeline.tsx`)
 - Feed of all `public = true` entries from all users
@@ -231,7 +234,7 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 ### Block / Mute (`src/hooks/useBlocks.ts`)
 - Mirrors `useFollows` exactly: `blockedIds: Set<string>`, optimistic `block`/`unblock` with error rollback, queries the `blocks` table filtered by `blocker_id = session.user.id`
 - Hides the blocked user's entries from the timeline and (via `UserProfileModal`) their profile's vibe feed
-- See §3 for the documented limitation: blocking doesn't prevent the blocked user from still following the blocker
+- Blocking also severs/prevents the reverse follow relationship at the DB level — see §3 and `supabase_block_follow_fix.sql`
 
 ### Onboarding Hint (`App.tsx`)
 - A modal (`.hint-modal-backdrop`/`.hint-modal`, cream `var(--accent)` background with dark text) explains how to use the grid: "click anywhere on the grid to log your vibe" + an explanation of the valence (left↔right) and arousal (bottom↔top) axes, mirroring the grid's own `← unpleasant · pleasant →` / `↓ low energy · high energy ↑` axis labels
@@ -258,7 +261,7 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 
 ### Shareable Vibe Card (`src/components/ShareModal.tsx` + `src/components/PublicShareView.tsx`)
 - `ShareModal`: opened from the `↗` button in MoodTable. Previews the vibe as a styled card. "Copy link" encodes vibe data (zone, valence, arousal, timestamp, note if `note_public`) as base64 JSON in `?share=<token>` — no server required, no auth required to view.
-- `PublicShareView`: rendered by `App.tsx` when `?share=` is detected in the URL (checked before auth). Decodes the token and renders the share card. Falls back to an error message for malformed tokens. Includes a CTA link back to the app.
+- `PublicShareView`: rendered by `App.tsx` when `?share=` is detected in the URL (checked before auth). Decodes the token; if the payload includes a vibe `id` (present on all links generated after 2026-06-07), re-fetches the live vibe from Supabase (anon-readable under the existing `public = true` RLS policy) to confirm it still exists and is still public — shows "this vibe is no longer shared" if not. Falls back to rendering from the encoded snapshot for older links without an `id`. Includes a CTA link back to the app.
 
 ### Username Editing (`src/components/EditUsernameModal.tsx` + `src/hooks/useProfile.ts`)
 - Header shows `@username` as a clickable button (only when username is loaded); clicking it now opens **`AccountSettingsModal`** (see above) rather than `EditUsernameModal` directly — the settings modal's account tab triggers `EditUsernameModal` from there
@@ -279,7 +282,7 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 All data isolation is enforced at the Postgres RLS layer, not in application code. The frontend uses the anon key only — no service role key is ever exposed. Client-side checks (e.g. hiding edit buttons after 3 hours) are UX, not security.
 
 ### Optimistic updates
-`useVibes` applies mutations locally before the Supabase round-trip completes. On error the optimistic update is not rolled back (known gap — low stakes for a personal tool). `useFollows` does roll back optimistic follow/unfollow on error, and `useBlocks` was written as a near-exact mirror of `useFollows` (same `Set<string>` + optimistic-with-rollback shape) — when one needs a fix, check whether the other does too.
+`useVibes` is *not* actually optimistic — `addVibe`/`updateVibe`/`deleteVibe` only call `setVibes` inside the `if (!error && data)` branch, after the Supabase round-trip resolves, so local state always reflects server truth and there's nothing to roll back. The previously-documented "doesn't roll back" gap was really that *failures were silent* — `MoodModal`/`MoodTable` ignored the returned `{ error }` and gave no feedback, so a failed mutation just looked like nothing happened. Fixed (2026-06-07): both now surface failures to the user (inline error in the modal, dismissing toast in the table) — see §9. `useFollows` and `useBlocks`, by contrast, genuinely are optimistic (`Set<string>` updated immediately, rolled back on error) — `useBlocks` was written as a near-exact mirror of `useFollows`, so when one needs a fix, check whether the other does too.
 
 ### Additive RLS policies for incremental visibility
 Postgres RLS OR's permissive policies of the same type together. `supabase_social_setup.sql` exploits this to widen `follows` SELECT visibility (originally "own rows only") to "any authenticated user" via a *second*, separately-named policy — without needing to know or drop the original policy's name. This is the preferred pattern whenever a new feature needs broader read access to an existing RLS-protected table: add a policy, don't risk replacing one.
@@ -307,12 +310,13 @@ src/
     Auth.tsx              magic link + password auth UI
     Analysis.tsx          full analysis panel (filter, export, trend, tod, heatmap, etc.)
     EditUsernameModal.tsx username edit modal (validation + Supabase write)
+    ErrorBoundary.tsx     app-level crash screen ("something broke / reload"); wraps <App /> in main.tsx
     MoodGrid.tsx          the clickable 2D grid with zones/dots/overlays
     MoodModal.tsx         post-click entry modal (note + privacy toggles)
     MoodTable.tsx         entries list with inline edit, undo delete, share, 3hr lock, empty state
-    PublicShareView.tsx   auth-free card view for ?share= URLs
+    PublicShareView.tsx   auth-free card view for ?share= URLs; re-validates vibe against DB
     SetPasswordModal.tsx  upgrade magic-link account to password auth
-    ShareModal.tsx        share modal — card preview + copy-link button
+    ShareModal.tsx        share modal — card preview + copy-link button; embeds vibe id in payload
     Timeline.tsx          global feed, search, date/zone filters, similar vibers, profile links
     UserProfileModal.tsx  per-user profile view: stats, follow/block, public vibes feed
   hooks/
@@ -321,6 +325,7 @@ src/
     useFollows.ts         follow/unfollow state with optimistic updates + error revert
     useBlocks.ts          block/unblock state, mirrors useFollows (optimistic + revert)
     useProfile.ts         fetch + update username from profiles table
+    useStreaks.ts         current + longest streak via get_streak_stats RPC; refreshes on add/delete
     useUserSearch.ts      debounced username search (ilike on profiles)
     useUserProfile.ts     per-user profile data: vibes, follower/following counts, mutual badge
     useSocialLists.ts     current user's followers + following as Profile[] lists
@@ -352,6 +357,8 @@ index.html                PWA meta tags + Google Fonts link
 vite.config.js            base: '/', vitest config (jsdom environment)
 tsconfig.json             strict mode, bundler moduleResolution, react-jsx
 supabase_social_setup.sql one-time SQL: blocks table/RLS + additive follows SELECT policy (run manually in SQL editor — see §3)
+supabase_block_follow_fix.sql one-time SQL: restrictive follows INSERT policy + trigger so blocking severs/prevents reverse-follows (run after social_setup — see §3)
+supabase_streak_stats.sql one-time SQL: get_streak_stats(tz text) RPC — island/gap window function returning current_streak + longest_streak; SECURITY INVOKER so RLS filters to the calling user's rows automatically
 CLAUDE_IDEAS.md           ideas log (implemented + proposed)
 SPEC.md                   this file
 ```
@@ -372,7 +379,7 @@ Items are loosely ordered by effort/value. Nothing here is committed — all are
 - ✓ **Username editing** — clickable `@handle` in header opens edit modal
 - ✓ **Time-of-day glyphs** — sun/moon overlay on each dot based on logging hour
 - ✓ **Vibrant background** — tiled zone-color gradient layers behind the whole app
-- ✓ **Streak tracking** — current and all-time best streak shown in analysis stats strip (all-time, not date-filtered)
+- ✓ **Streak tracking** — current streak and all-time best shown in the header badge (always visible) and the analysis stats strip; computed via `get_streak_stats` Supabase RPC (island/gap window function, all-time, timezone-aware)
 - ✓ **Time-of-day analysis** — analysis section bucketing entries by morning/afternoon/evening/night with count and avg v/a per slot
 - ✓ **JSON export** — `↓ json` button alongside CSV; exports filtered slice with all fields including zone
 - ✓ **Shareable vibe card** — `↗` on public entries opens share modal; "copy link" produces a `?share=<token>` URL with base64-encoded vibe data. `PublicShareView` renders the card without auth for any share URL.
@@ -383,7 +390,7 @@ Items are loosely ordered by effort/value. Nothing here is committed — all are
 - ✓ **Account settings modal** — `AccountSettingsModal` consolidates username/password/sign-out/following/followers/blocked into one tabbed modal, replacing scattered header buttons
 - ✓ **Timeline filters by date and mood** — `from`/`to` date-range inputs + toggleable zone/mood chips, combinable with the everyone/following feed filter
 - ✓ **Mutual follows / follow-back indicator** — "follows you" badge shown on `UserProfileModal` when the relationship is mutual (requires the additive `follows` SELECT policy in `supabase_social_setup.sql`)
-- ✓ **Block / mute** — `blocks` table + `useBlocks` (mirrors `useFollows`); hides a blocked user's entries from the timeline and their profile's vibe feed. Documented limitation: doesn't prevent the blocked user from still following the blocker (see §3, §9)
+- ✓ **Block / mute** — `blocks` table + `useBlocks` (mirrors `useFollows`); hides a blocked user's entries from the timeline and their profile's vibe feed. Also enforced at the DB level: blocking severs and prevents reverse-follows (`supabase_block_follow_fix.sql`, see §3)
 - ✓ **New-user onboarding hint** — modal explaining how to use the grid (axes + click-to-log), shown each visit to the `log` view until the user logs their first vibe
 - ✓ **Improved empty states** — large, centered "no logs yet" messaging in `MoodTable` for zero-entry accounts
 
@@ -402,17 +409,30 @@ Per-user rename of the seven zone labels, stored in a `zone_labels` column on `p
 
 ## 9. Known Gaps & Gotchas
 
-- **Optimistic updates in `useVibes` don't roll back** on error (see §6). `useFollows` does roll back correctly.
-- **`labelScale` on mobile** scales all label font sizes by 0.58. If label sizes are adjusted, verify at mobile widths.
-- **The 3-hour lock constant exists in two places**: `MoodTable.tsx` (client) and the Supabase RLS policy (server). They must stay in sync.
-- **No error boundary.** An uncaught render error will crash the whole app.
-- **Similar vibers uses all-time data.** The zone distribution vectors are computed from a user's full public history, not a recent window. Could be noisy for users whose mood patterns have shifted.
-- **Timeline pagination is page-local for every client-side filter** — "following", and now also the date-range and mood/zone filters, are all applied over already-loaded pages, not the full dataset. The "load more" button is hidden whenever any of these filters is active, since loading more wouldn't reliably surface matching older entries.
-- **Blocking doesn't prevent the blocked user from following you.** `useBlocks` only filters what *you* see (their entries vanish from your timeline and profile view); it can't stop them from adding you via `follows`. A real fix would need an RLS check on `follows` INSERT against the `blocks` table — deferred as riskier than the initial mute scope warranted. See §3.
+### Resolved this session (2026-06-08)
+
+- ✓ **Streak badge in header.** Current streak (and best-ever when longer) now shown as a persistent pill in the header, not only buried in the analysis panel. Both values fetched via `get_streak_stats` Supabase RPC (`useStreaks.ts`); refreshes after add and delete.
+- ✓ **Streak logic moved to Supabase.** Previously computed client-side from the `vibes` array (no longest streak, no timezone awareness). Replaced with a `get_streak_stats(tz text)` Postgres function using the island/gap window trick (`d - ROW_NUMBER()` groups consecutive dates). SECURITY INVOKER — RLS automatically scopes to the calling user's rows; no uid parameter needed.
+
+### Resolved this session (2026-06-07)
+
+- ✓ **Mutation failures were silent.** `useVibes` was never actually optimistic (state only updates `if (!error && data)`), but failures were swallowed with no user feedback — a failed log/edit/delete just looked like nothing happened. Fixed: `MoodModal` now shows an inline error and stays open on failure (`handleModalSubmit` returns success/failure instead of unconditionally closing); `MoodTable` shows a dismissing error toast (reusing the undo-toast visual pattern) when an edit or delete fails, so the user knows a row reverted/restored rather than wondering why it looks stale.
+- ✓ **No error boundary.** Added `src/components/ErrorBoundary.tsx`, wrapping `<App />` in `main.tsx`. An uncaught render error now shows a "something broke / your data is safe / reload" screen instead of a blank crash.
+- ✓ **Share links weren't validated against the DB.** `encodeShare` now embeds the vibe `id` in the payload; `PublicShareView` looks the vibe up live via Supabase (anon-readable under the existing `public = true` RLS policy) and renders current data, showing "this vibe is no longer shared" if it was deleted or made private. Older links without an `id` still render from the encoded payload as before — non-breaking.
+- ✓ **CI used `npm install` instead of `npm ci`.** The lockfile has been in sync since PR #4; `.github/workflows/ci.yml` now runs `npm ci` for a reproducible, exact-match install.
+- ✓ **Blocking didn't prevent the blocked user from following you.** See §3 / `supabase_block_follow_fix.sql` — a restrictive `follows` INSERT policy plus an `AFTER INSERT` trigger on `blocks` now sever and prevent reverse-follows at the DB level.
+
+### Accepted tradeoffs & maintenance notes (not bugs)
+
+- **`labelScale` on mobile** scales all label font sizes by 0.58 (`MoodGrid.tsx`). Not a gap — just remember to re-check mobile widths if label sizing changes.
+- **The 3-hour lock constant exists in two places** (`LOCK_AFTER_MS` in `MoodTable.tsx` and the Supabase RLS policy's `interval '3 hours'`) because enforcement is deliberately split across the TS client (UX) and Postgres (security) — see §6. They're cross-referenced here and in §6; there's no single source of truth to extract them to across that boundary.
+- **Similar vibers uses all-time data**, not a recent window — a deliberate simplicity choice for the first version. Could get noisy for users whose patterns have shifted; a recency-weighted variant would be a reasonable future enhancement (see §8) but isn't a defect.
+- **Timeline pagination is page-local for client-side filters** ("following", date-range, mood/zone — see §5 Timeline). Doing this properly needs server-side filtering (a Postgres RPC/view), which is feature-sized rather than a quick fix; tracked as a roadmap idea in §8 rather than an open gap. The "load more" button is correctly hidden whenever a page-local filter is active, so the limitation is at least not silently misleading.
+- **PWA is not offline-capable for data**, by design — a mood logger needs a live, authenticated connection to Supabase to log or read entries; only static assets are cached. This is a documented non-goal, not a defect.
+
+### Historical note
+
 - **`useVibes` previously had a cross-account data leak**: `fetchVibes` queried `vibes` with no `user_id` filter, relying solely on RLS (`auth.uid() = user_id OR public = true`) — this meant the personal grid/table/analysis views showed the current user's own vibes *plus* every other user's public vibes, rendered as if they were the viewer's own. Fixed by adding an explicit `.eq('user_id', session.user.id)`. (Latent since the personal views were introduced; only surfaced once a second account with public entries existed to test against.)
-- **Share links encode vibe data client-side** — they are not validated against the DB when viewed. A share link for a private-later-made vibe will still show the original data.
-- **PWA is not offline-capable for data.** Static assets are cached; Supabase API calls are always network-only. The app requires connectivity to log or fetch vibes.
-- **`package-lock.json` was regenerated** (PR #4) to include all transitive entries. `npm ci` should now work. CI currently still runs `npm install` for safety; switching to `npm ci` is a low-risk follow-up if desired.
 
 ---
 
@@ -422,8 +442,27 @@ Per-user rename of the seven zone labels, stored in a `zone_labels` column on `p
 
 1. Checkout (`actions/checkout@v4`)
 2. Node 22 (`actions/setup-node@v4`)
-3. `npm install` (could be `npm ci` now that the lockfile is synced — see §9)
+3. `npm ci` (lockfile kept in sync with `package.json`; reproducible exact-match install)
 4. `npm run typecheck` (`tsc --noEmit`)
 5. `npm test` (`vitest run` — the full suite)
 
 A failing type check or test blocks the green check on the PR. This is separate from Vercel, which independently builds and deploys a preview on each push (the `Vercel` status check). No env vars are needed in CI: the only test that touches Supabase (`follows.test.ts`) mocks `../lib/supabase`, and the rest are pure logic or props-driven.
+
+---
+
+## 11. Android App Wrapper
+
+The app has been adapted to a native Android application using [Capacitor](https://capacitorjs.com/). 
+
+**Key Configuration:**
+- **App ID:** `com.kaiserfactorial.vibelogger`
+- **App Name:** `vibelogger`
+- **Platform Wrapper:** `@capacitor/android` + `@capacitor/cli`
+
+**Build Process:**
+1. Build the web app: `npm run build`
+2. Sync Capacitor: `npx cap sync android`
+3. Compile the APK: `cd android && ./gradlew assembleDebug`
+
+The resulting APK is generated in `android/app/build/outputs/apk/debug/app-debug.apk`. 
+See `BUILD.md` in the root app directory for instructions on how to install it via USB or Wi-Fi using `adb` or standard file transfer.

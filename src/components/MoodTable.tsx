@@ -38,7 +38,15 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
   const [sharingVibe,   setSharingVibe]   = useState<Vibe | null>(null)
   const [pendingDeletes, setPendingDeletes] = useState<Map<string, PendingDelete>>(new Map())
   const [tick,          setTick]          = useState(0)
+  const [errorToast,    setErrorToast]    = useState<string | null>(null)
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Auto-dismiss the error toast after a few seconds
+  useEffect(() => {
+    if (!errorToast) return
+    const t = setTimeout(() => setErrorToast(null), 4000)
+    return () => clearTimeout(t)
+  }, [errorToast])
 
   // Tick every 250ms so the countdown numbers stay live while there are pending deletes
   useEffect(() => {
@@ -52,8 +60,9 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
 
   function startDelete(v: Vibe) {
     const timerId = setTimeout(async () => {
-      await onDelete(v.id)
+      const { error } = await onDelete(v.id)
       setPendingDeletes(prev => { const m = new Map(prev); m.delete(v.id); return m })
+      if (error) setErrorToast("couldn't delete — entry restored")
     }, UNDO_WINDOW_MS)
     setPendingDeletes(prev => new Map(prev).set(v.id, { vibe: v, timerId, startedAt: Date.now() }))
     setEditingId(null)
@@ -77,10 +86,11 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
 
   async function saveEdit(id: string) {
     setSaving(true)
-    await onUpdate(id, editNote.trim() || null)
+    const { error } = await onUpdate(id, editNote.trim() || null)
     setSaving(false)
     setEditingId(null)
     setEditNote('')
+    if (error) setErrorToast("couldn't save edit — try again")
   }
 
   const displayedVibes = vibes.filter(v => !pendingDeletes.has(v.id))
@@ -172,6 +182,15 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
 
       {sharingVibe && (
         <ShareModal vibe={sharingVibe} onClose={() => setSharingVibe(null)} />
+      )}
+
+      {/* Mutation error toast */}
+      {errorToast && (
+        <div className="undo-toast-stack">
+          <div className="undo-toast">
+            <span className="undo-toast-msg" style={{ color: 'var(--danger)' }}>{errorToast}</span>
+          </div>
+        </div>
       )}
 
       {/* Undo toast */}

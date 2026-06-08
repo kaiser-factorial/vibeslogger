@@ -17,9 +17,9 @@ jobs:
         with:
           node-version: '22'
 
-      # Using `npm install` rather than `npm ci`: the committed lockfile isn't
-      # kept strictly in sync with package.json, and `npm ci` requires an exact match.
-      - run: npm install
+      # package-lock.json was regenerated (PR #4) and is now kept in sync with
+      # package.json, so npm ci can enforce a reproducible, exact-match install.
+      - run: npm ci
 
       - name: Type check
         run: npm run typecheck

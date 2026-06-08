@@ -17,6 +17,7 @@ import useFollows from './hooks/useFollows'
 import useBlocks from './hooks/useBlocks'
 import useProfile from './hooks/useProfile'
 import useAccent from './hooks/useAccent'
+import useStreaks from './hooks/useStreaks'
 import type { PendingVibe } from './types'
 
 type View = 'log' | 'analysis' | 'timeline'
@@ -44,6 +45,7 @@ export default function App() {
   const { blockedIds, block, unblock } = useBlocks(session)
   const { username, updateUsername } = useProfile(session)
   const { setAccentFromVibe } = useAccent(session)
+  const { currentStreak, longestStreak, refreshStreaks } = useStreaks(session)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,11 +79,19 @@ export default function App() {
   }
 
   async function handleModalSubmit(note: string, isPublic: boolean, isNotePublic: boolean) {
-    if (!pendingVibe) return
+    if (!pendingVibe) return true
     const { error } = await addVibe({ x: pendingVibe.x, y: pendingVibe.y, note, isPublic, isNotePublic })
-    // Recolor the UI to match the just-logged vibe's zone.
-    if (!error) setAccentFromVibe(pendingVibe.x, pendingVibe.y)
+    if (error) return false
+    setAccentFromVibe(pendingVibe.x, pendingVibe.y)
     setPendingVibe(null)
+    refreshStreaks()
+    return true
+  }
+
+  async function handleDeleteVibe(id: string) {
+    const result = await deleteVibe(id)
+    if (!result.error) refreshStreaks()
+    return result
   }
 
   if (SHARE_TOKEN) return <PublicShareView token={SHARE_TOKEN} />
@@ -103,6 +113,11 @@ export default function App() {
             )}
           </div>
           <div className="header-actions">
+            {currentStreak >= 1 && (
+              <span className="streak-badge">
+                {currentStreak}d streak{longestStreak > currentStreak ? ` · best: ${longestStreak}d` : ''}
+              </span>
+            )}
             {username && (
               <button className="btn-username" onClick={() => setShowSettings(true)}>
                 @{username}
@@ -153,7 +168,7 @@ export default function App() {
               <div className="panel-table">
                 {loading
                   ? <div className="loading">loading vibes...</div>
-                  : <MoodTable vibes={vibes} onDelete={deleteVibe} onUpdate={updateVibe} />
+                  : <MoodTable vibes={vibes} onDelete={handleDeleteVibe} onUpdate={updateVibe} />
                 }
               </div>
             )}

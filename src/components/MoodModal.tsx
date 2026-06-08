@@ -6,7 +6,7 @@ import { paletteFor } from '../lib/accent'
 
 interface Props {
   vibe: PendingVibe
-  onSubmit: (note: string, isPublic: boolean, isNotePublic: boolean) => Promise<void>
+  onSubmit: (note: string, isPublic: boolean, isNotePublic: boolean) => Promise<boolean>
   onClose: () => void
 }
 
@@ -15,6 +15,7 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
   const [isPublic,    setIsPublic]    = useState(true)
   const [notePublic,  setNotePublic]  = useState(false)
   const [saving,      setSaving]      = useState(false)
+  const [error,       setError]       = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const wordCount = note.trim() ? note.trim().split(/\s+/).length : 0
@@ -52,8 +53,10 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
 
   async function handleSubmit() {
     setSaving(true)
-    await onSubmit(note.trim(), isPublic, notePublic && !!note.trim())
+    setError(null)
+    const ok = await onSubmit(note.trim(), isPublic, notePublic && !!note.trim())
     setSaving(false)
+    if (!ok) setError("couldn't save — check your connection and try again")
   }
 
   return (
@@ -75,6 +78,7 @@ export default function MoodModal({ vibe, onSubmit, onClose }: Props) {
             {wordCount} word{wordCount !== 1 ? 's' : ''} — add a few more to count toward word analysis
           </div>
         )}
+        {error && <div className="modal-error">{error}</div>}
         <div className="modal-toggles">
           <label className="modal-toggle-row">
             <input
