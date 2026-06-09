@@ -203,12 +203,14 @@ export default function MoodGrid({
         {/* Header strip: toggles sit top-right, before the notes column */}
         <div className="grid-header">
           <div className="grid-toggles">
+            {/* 
             <button
               className={`grid-toggle ${showLabels ? 'grid-toggle--on' : ''}`}
               onClick={onToggleLabels}
             >
               labels
             </button>
+            */}
             <button
               className={`grid-toggle ${showEmotions ? 'grid-toggle--on' : ''}`}
               onClick={onToggleEmotions}
