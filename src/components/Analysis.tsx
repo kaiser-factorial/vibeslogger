@@ -3,7 +3,7 @@ import { getZone, ZONE_META, ZONE_ORDER } from '../lib/zones'
 import { topWordsByZone } from '../lib/wordAnalysis'
 import type { Vibe } from '../types'
 
-export const UNLOCK_THRESHOLD = 10
+export const UNLOCK_THRESHOLD = 5
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

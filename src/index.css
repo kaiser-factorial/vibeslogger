@@ -516,8 +516,8 @@ button { -webkit-tap-highlight-color: transparent; }
 .nav-tab {
   background: none; border: none; border-bottom: 2px solid transparent;
   color: var(--muted); cursor: pointer; font-family: inherit;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
-  padding: 6px 14px 6px 0;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+  padding: 8px 16px 8px 0;
   margin-bottom: -1px;
   transition: color 0.15s, border-color 0.15s, transform 0.1s;
 }
