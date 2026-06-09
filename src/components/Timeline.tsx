@@ -259,11 +259,24 @@ export default function Timeline({ session, followingIds, blockedIds, follow, un
 
       <div style={{ marginBottom: '16px' }}>
         <button
-          className="btn-ghost"
-          style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          style={{ 
+            width: '100%',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: '6px',
+            color: 'var(--muted)',
+            padding: '9px 12px', 
+            fontSize: '12px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+          }}
           onClick={() => setFiltersExpanded(!filtersExpanded)}
         >
-          filter vibes {filtersExpanded ? '▲' : '▼'}
+          <span>filter vibes...</span>
+          <span style={{ fontSize: '10px' }}>{filtersExpanded ? '▲' : '▼'}</span>
         </button>
       </div>
 
