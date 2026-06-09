@@ -110,6 +110,7 @@ interface UserData {
 }
 
 function SimilarVibers({ entries, currentUserId, followingIds, follow, unfollow, onOpenProfile }: SimilarVibersProps) {
+  const [isOpen, setIsOpen] = useState(false)
   const byUser: Record<string, UserData> = {}
   entries.forEach(e => {
     if (!byUser[e.user_id]) byUser[e.user_id] = { counts: {}, total: 0, username: e.username }
@@ -139,30 +140,40 @@ function SimilarVibers({ entries, currentUserId, followingIds, follow, unfollow,
 
   return (
     <div className="similar-vibers">
-      <div className="timeline-section-title">similar vibers</div>
-      <div className="similar-sub">based on zone distribution across all public entries</div>
-      <div className="similar-list">
-        {matches.map(m => {
-          const isFollowing = followingIds.has(m.uid)
-          return (
-            <div key={m.uid} className="similar-row">
-              <button className="similar-name similar-name--clickable" onClick={() => onOpenProfile(m.uid)}>
-                @{m.username}
-              </button>
-              <div className="similar-bar-track">
-                <div className="similar-bar-fill" style={{ width: `${m.pct}%` }} />
-              </div>
-              <span className="similar-pct">{m.pct}%</span>
-              <button
-                className={`follow-btn ${isFollowing ? 'follow-btn--following' : ''}`}
-                onClick={() => isFollowing ? unfollow(m.uid) : follow(m.uid)}
-              >
-                {isFollowing ? 'following' : 'follow'}
-              </button>
-            </div>
-          )
-        })}
+      <div 
+        className="timeline-section-title"
+        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', userSelect: 'none' }}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        similar vibers <span style={{ fontSize: '11px', opacity: 0.6 }}>{isOpen ? '▲' : '▼'}</span>
       </div>
+      {isOpen && (
+        <>
+          <div className="similar-sub">based on zone distribution across all public entries</div>
+          <div className="similar-list">
+            {matches.map(m => {
+              const isFollowing = followingIds.has(m.uid)
+              return (
+                <div key={m.uid} className="similar-row">
+                  <button className="similar-name similar-name--clickable" onClick={() => onOpenProfile(m.uid)}>
+                    @{m.username}
+                  </button>
+                  <div className="similar-bar-track">
+                    <div className="similar-bar-fill" style={{ width: `${m.pct}%` }} />
+                  </div>
+                  <span className="similar-pct">{m.pct}%</span>
+                  <button
+                    className={`follow-btn ${isFollowing ? 'follow-btn--following' : ''}`}
+                    onClick={() => isFollowing ? unfollow(m.uid) : follow(m.uid)}
+                  >
+                    {isFollowing ? 'following' : 'follow'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }

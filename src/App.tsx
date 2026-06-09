@@ -113,16 +113,18 @@ export default function App() {
             )}
           </div>
           <div className="header-actions">
-            {currentStreak >= 1 && (
-              <span className="streak-badge">
-                {currentStreak}d streak{longestStreak > currentStreak ? ` · best: ${longestStreak}d` : ''}
-              </span>
-            )}
-            {username && (
-              <button className="btn-username" onClick={() => setShowSettings(true)}>
-                @{username}
-              </button>
-            )}
+            <div className="user-block">
+              {username && (
+                <button className="btn-username" onClick={() => setShowSettings(true)}>
+                  @{username}
+                </button>
+              )}
+              {currentStreak >= 1 && (
+                <span className="streak-badge">
+                  {currentStreak}d streak{longestStreak > currentStreak ? ` · best: ${longestStreak}d` : ''}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <nav className="app-nav">
