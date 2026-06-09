@@ -139,7 +139,7 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
                         {v.note ?? '— no note —'}
                       </div>
                       <div className="row-actions" style={{ justifyContent: 'flex-start', marginTop: '6px' }}>
-                        <button className="btn-edit" style={{ padding: '0px 8px', fontSize: '12px', color: '#141414', background: '#f8f4ec', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', opacity: 0.85, fontWeight: 'bold' }} onClick={() => setActionModalVibe(v)} title="More actions">
+                        <button className="btn-edit" style={{ padding: '0px 4px', fontSize: '12px', color: '#141414', background: '#f8f4ec', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', opacity: 0.85, fontWeight: 'bold' }} onClick={() => setActionModalVibe(v)} title="More actions">
                           •••
                         </button>
                       </div>
