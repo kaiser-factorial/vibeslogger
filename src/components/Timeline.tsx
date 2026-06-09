@@ -214,17 +214,17 @@ export default function Timeline({ session, followingIds, blockedIds, follow, un
 
   return (
     <div className="timeline-wrap">
-      <UserSearchBox
-        session={session}
+      <SimilarVibers
+        entries={entries}
+        currentUserId={session.user.id}
         followingIds={followingIds}
         follow={follow}
         unfollow={unfollow}
         onOpenProfile={onOpenProfile}
       />
 
-      <SimilarVibers
-        entries={entries}
-        currentUserId={session.user.id}
+      <UserSearchBox
+        session={session}
         followingIds={followingIds}
         follow={follow}
         unfollow={unfollow}
