@@ -260,16 +260,15 @@ export default function Timeline({ session, followingIds, blockedIds, follow, un
       <div style={{ marginBottom: '16px' }}>
         <button
           style={{ 
-            width: '100%',
             background: 'var(--surface)',
             border: '1px solid var(--border)',
             borderRadius: '6px',
             color: 'var(--muted)',
-            padding: '9px 12px', 
+            padding: '7px 12px', 
             fontSize: '12px', 
-            display: 'flex', 
+            display: 'inline-flex', 
             alignItems: 'center', 
-            justifyContent: 'space-between',
+            gap: '8px',
             cursor: 'pointer',
             fontFamily: 'inherit'
           }}

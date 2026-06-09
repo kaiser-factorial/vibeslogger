@@ -203,7 +203,7 @@ The **mood grid points** (in explore mode), the **"recorded moods" table dots**,
 - **Word analysis**: top 5 words per zone, stop-words filtered, only notes with ≥3 words counted
 
 ### Streak Badge (header)
-A small pill in the top-right header (`header-actions`, before the `@username` button) showing the user's current daily streak. Displays as `Nd streak`; when the all-time best is longer than the current run, appends ` · best: Nd`. Hidden when streak is 0. Refreshes on mount, after a successful vibe add, and after a delete (since deleting the only log for a day can break a streak). Both values (`current_streak`, `longest_streak`) are returned in one call to the `get_streak_stats` Supabase RPC (`src/hooks/useStreaks.ts`).
+Present in both the web app and the Android app. The `@username` pill and streak text are grouped in a `.user-block` flex column (right-aligned) in the top-right corner of the header — username on top, streak directly below it as plain right-aligned text with a text-shadow for legibility over the colorful background. Displays as `Nd streak`; when the all-time best is longer than the current run, appends ` · best: Nd`. Hidden when streak is 0. Refreshes on mount, after a successful vibe add, and after a delete (since deleting the only log for a day can break a streak). Both values (`current_streak`, `longest_streak`) are returned in one call to the `get_streak_stats` Supabase RPC (`src/hooks/useStreaks.ts`), which lives in both codebases.
 
 ### Timeline (`src/components/Timeline.tsx`)
 - Feed of all `public = true` entries from all users
@@ -458,6 +458,9 @@ The app has been adapted to a native Android application using [Capacitor](https
 - **Push Notifications:** The Android app leverages `@capacitor/local-notifications` to schedule daily randomized background push notifications (two a day: one between 11:00 AM - 2:30 PM, and one between 8:00 PM - 11:30 PM) reminding the user to log their vibe.
 - **Offline Caching:** If the device is offline, pending vibes are stored locally in the `vibelogger_offline_queue` via `@capacitor/preferences`. These cached entries are flushed and synced to Supabase when the app detects a connection again.
 - **Haptic Feedback:** The Android version utilizes `@capacitor/haptics` to trigger tactile vibration feedback during grid interactions.
+- **Grid / Record toggle:** The `log` view has a segmented pill (`grid` | `record`) in the header that switches between the mood grid and the entries list — replacing the side-by-side layout used on desktop, which doesn't work well on a phone's narrow screen.
+- **`VibeActionModal`** (`src/components/VibeActionModal.tsx`): tapping a row in the record view opens a full-screen modal (zone label, dot color, note, timestamp) with share, edit-note, and delete actions — replacing the inline row-action buttons from the desktop `MoodTable`, which are too small to tap reliably on mobile.
+- **Streak badge:** Shared with the web app — see §5. Both codebases use the same `useStreaks` hook and `.user-block` stacked layout.
 - **Project Structure:** Code changes for React components must be synced into the Android project explicitly, and live-updates are not supported in the built APK; manual re-compilation and installation is necessary.
 
 **Key Configuration:**
