@@ -452,7 +452,13 @@ A failing type check or test blocks the green check on the PR. This is separate 
 
 ## 11. Android App Wrapper
 
-The app has been adapted to a native Android application using [Capacitor](https://capacitorjs.com/). 
+The app has been adapted to a native Android application using [Capacitor](https://capacitorjs.com/) and lives in a parallel project directory (`vibeslogger_android_app/vibeslogger_init`). 
+
+**Major Differences from the Web App:**
+- **Push Notifications:** The Android app leverages `@capacitor/local-notifications` to schedule daily randomized background push notifications (two a day: one between 11:00 AM - 2:30 PM, and one between 8:00 PM - 11:30 PM) reminding the user to log their vibe.
+- **Offline Caching:** If the device is offline, pending vibes are stored locally in the `vibelogger_offline_queue` via `@capacitor/preferences`. These cached entries are flushed and synced to Supabase when the app detects a connection again.
+- **Haptic Feedback:** The Android version utilizes `@capacitor/haptics` to trigger tactile vibration feedback during grid interactions.
+- **Project Structure:** Code changes for React components must be synced into the Android project explicitly, and live-updates are not supported in the built APK; manual re-compilation and installation is necessary.
 
 **Key Configuration:**
 - **App ID:** `com.kaiserfactorial.vibelogger`
