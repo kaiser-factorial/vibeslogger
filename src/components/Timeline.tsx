@@ -186,6 +186,7 @@ export default function Timeline({ session, followingIds, blockedIds, follow, un
   const [from,     setFrom]     = useState('')
   const [to,       setTo]       = useState('')
   const [zones,    setZones]    = useState<Set<ZoneId>>(new Set())
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
 
   function toggleZone(z: ZoneId) {
     setZones(prev => {
@@ -256,30 +257,42 @@ export default function Timeline({ session, followingIds, blockedIds, follow, un
           : 'public vibes from everyone'}
       </div>
 
-      <div className="timeline-mood-filter">
-        <label className="filter-label">from</label>
-        <input type="date" className="filter-input" value={from} onChange={e => setFrom(e.target.value)} />
-        <label className="filter-label">to</label>
-        <input type="date" className="filter-input" value={to} onChange={e => setTo(e.target.value)} />
-        <div className="zone-filter-chips">
-          {ZONE_ORDER.map(z => (
-            <button
-              key={z}
-              className={`zone-chip ${zones.has(z) ? 'zone-chip--active' : ''}`}
-              style={zones.has(z) ? { background: ZONE_META[z].color, color: '#111', borderColor: ZONE_META[z].color } : undefined}
-              onClick={() => toggleZone(z)}
-              title={ZONE_META[z].label}
-            >
-              {ZONE_META[z].label}
-            </button>
-          ))}
-        </div>
-        {hasAnyFilter && (
-          <button className="btn-ghost filter-clear" onClick={() => { setFrom(''); setTo(''); setZones(new Set()) }}>
-            clear filters
-          </button>
-        )}
+      <div style={{ marginBottom: '16px' }}>
+        <button
+          className="btn-ghost"
+          style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+        >
+          filter vibes {filtersExpanded ? '▲' : '▼'}
+        </button>
       </div>
+
+      {filtersExpanded && (
+        <div className="timeline-mood-filter">
+          <label className="filter-label">from</label>
+          <input type="date" className="filter-input" value={from} onChange={e => setFrom(e.target.value)} />
+          <label className="filter-label">to</label>
+          <input type="date" className="filter-input" value={to} onChange={e => setTo(e.target.value)} />
+          <div className="zone-filter-chips">
+            {ZONE_ORDER.map(z => (
+              <button
+                key={z}
+                className={`zone-chip ${zones.has(z) ? 'zone-chip--active' : ''}`}
+                style={zones.has(z) ? { background: ZONE_META[z].color, color: '#111', borderColor: ZONE_META[z].color } : undefined}
+                onClick={() => toggleZone(z)}
+                title={ZONE_META[z].label}
+              >
+                {ZONE_META[z].label}
+              </button>
+            ))}
+          </div>
+          {hasAnyFilter && (
+            <button className="btn-ghost filter-clear" onClick={() => { setFrom(''); setTo(''); setZones(new Set()) }}>
+              clear filters
+            </button>
+          )}
+        </div>
+      )}
 
       {visibleEntries.length === 0 ? (
         <div className="timeline-empty">
