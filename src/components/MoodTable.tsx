@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { gridColor } from '../lib/zones'
 import type { Vibe } from '../types'
 import ShareModal from './ShareModal'
+import VibeActionModal from './VibeActionModal'
 
 interface Props {
   vibes: Vibe[]
@@ -36,6 +37,7 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
   const [editNote,      setEditNote]      = useState('')
   const [saving,        setSaving]        = useState(false)
   const [sharingVibe,   setSharingVibe]   = useState<Vibe | null>(null)
+  const [actionModalVibe, setActionModalVibe] = useState<Vibe | null>(null)
   const [pendingDeletes, setPendingDeletes] = useState<Map<string, PendingDelete>>(new Map())
   const [tick,          setTick]          = useState(0)
   const [errorToast,    setErrorToast]    = useState<string | null>(null)
@@ -112,7 +114,7 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
         <table className="vibe-table">
           <thead>
             <tr>
-              <th>date</th><th>time</th><th>mood</th><th>notes</th><th></th>
+              <th>date/time</th><th>mood</th><th>notes</th>
             </tr>
           </thead>
           <tbody>
@@ -122,56 +124,26 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
 
               return (
                 <tr key={v.id}>
-                  <td className="td-muted">{fmtDate(v.created_at)}</td>
-                  <td className="td-muted">{fmtTime(v.created_at)}</td>
+                  <td className="td-muted">
+                    <div>{fmtDate(v.created_at)}</div>
+                    <div style={{ fontSize: '9px', marginTop: '2px', opacity: 0.7 }}>{fmtTime(v.created_at)}</div>
+                  </td>
                   <td className="td-mono">
                     <span className="vibe-dot"
                       style={{ background: gridColor(v.valence, v.arousal) }} />
                     ({v.valence}, {v.arousal})
                   </td>
                   <td className="td-note">
-                    {editing ? (
-                      <input
-                        className="note-edit-input"
-                        value={editNote}
-                        onChange={e => setEditNote(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter')  saveEdit(v.id)
-                          if (e.key === 'Escape') cancelEdit()
-                        }}
-                        autoFocus disabled={saving}
-                      />
-                    ) : (
-                      v.note ?? <span className="td-empty">—</span>
-                    )}
-                  </td>
-                  <td className="td-actions">
-                    {editing ? (
-                      <div className="row-actions">
-                        <button className="btn-save" onClick={() => saveEdit(v.id)} disabled={saving}>
-                          {saving ? '...' : 'save'}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontStyle: v.note ? 'normal' : 'italic', opacity: v.note ? 1 : 0.5 }}>
+                        {v.note ?? '— no note —'}
+                      </div>
+                      <div className="row-actions" style={{ justifyContent: 'flex-start', marginTop: '6px' }}>
+                        <button className="btn-edit" style={{ padding: '0px 8px', fontSize: '12px', color: '#141414', background: '#f8f4ec', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '12px', opacity: 0.85, fontWeight: 'bold' }} onClick={() => setActionModalVibe(v)} title="More actions">
+                          •••
                         </button>
-                        <button className="btn-cancel-edit" onClick={cancelEdit}>×</button>
                       </div>
-                    ) : (
-                      <div className="row-actions">
-                        {v.public && (
-                          <button className="btn-share"
-                            style={{ color: gridColor(v.valence, v.arousal) }}
-                            onClick={() => setSharingVibe(v)}
-                            title="share">↗</button>
-                        )}
-                        {locked ? (
-                          <span className="entry-locked" title="locked after 3 hours">·</span>
-                        ) : (
-                          <>
-                            <button className="btn-edit" onClick={() => startEdit(v)}>edit</button>
-                            <button className="btn-delete" onClick={() => startDelete(v)}
-                              title="delete">×</button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                    </div>
                   </td>
                 </tr>
               )
@@ -182,6 +154,16 @@ export default function MoodTable({ vibes, onDelete, onUpdate }: Props) {
 
       {sharingVibe && (
         <ShareModal vibe={sharingVibe} onClose={() => setSharingVibe(null)} />
+      )}
+
+      {actionModalVibe && (
+        <VibeActionModal
+          vibe={actionModalVibe}
+          onClose={() => setActionModalVibe(null)}
+          onUpdate={onUpdate}
+          onDelete={startDelete}
+          onShare={setSharingVibe}
+        />
       )}
 
       {/* Mutation error toast */}
