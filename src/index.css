@@ -185,6 +185,9 @@ body {
   color: var(--accent-ink);
   background: var(--accent);
 }
+.grid-toggle--on:hover {
+  color: var(--accent-ink);
+}
 
 /* ── Plotted vibe points (sun / moon glyphs) ── */
 .vibe-point {
