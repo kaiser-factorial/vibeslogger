@@ -20,6 +20,10 @@ import useAccent from './hooks/useAccent'
 import useStreaks from './hooks/useStreaks'
 import type { PendingVibe } from './types'
 
+import { useAgentTelemetry } from './hooks/useAgentTelemetry'
+import { collection, addDoc } from 'firebase/firestore'
+import { db } from './lib/firebase_telemetry'
+
 type View = 'log' | 'analysis' | 'timeline'
 
 // Resolved once at module load — share links are static URLs, no reactivity needed
@@ -46,6 +50,29 @@ export default function App() {
   const { username, updateUsername } = useProfile(session)
   const { setAccentFromVibe } = useAccent(session)
   const { currentStreak, longestStreak, refreshStreaks } = useStreaks(session)
+
+  // --- Telemetry Logger ---
+  const { flushTrajectory } = useAgentTelemetry(async (trajectory) => {
+    if (!trajectory || trajectory.length === 0) return;
+    try {
+      await addDoc(collection(db, "trajectories"), {
+        app_name: "vibeslogger",
+        timestamp: Date.now(),
+        data: trajectory
+      });
+      console.log("[Telemetry] Flushed to Firestore");
+    } catch (e) {
+      console.error("[Telemetry] Error saving: ", e);
+    }
+  });
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      flushTrajectory();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [flushTrajectory]);
+  // -------------------------
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
